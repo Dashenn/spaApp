@@ -1,0 +1,9 @@
+<h2>Здравствуйте, {{ client_user.first_name }}!</h2>
+<p>Вы успешно записались на услугу в Lotus Bloom.</p>
+<ul>
+  <li><strong>Услуга:</strong> {{ booking.service.name }}</li>
+  <li><strong>Специалист:</strong> {{ booking.employee.user }}</li>
+  <li><strong>Дата:</strong> {{ date_str }}</li>
+  <li><strong>Время:</strong> {{ time_str }} - {{ end_time_str }}</li>
+</ul>
+<p>Спасибо за ваш выбор!</p>

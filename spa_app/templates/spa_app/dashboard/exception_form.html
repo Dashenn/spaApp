@@ -1,0 +1,65 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+<div class="row g-4">
+  <div class="col-lg-12">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-4">{{ title }}</h5>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              {{ form.employee.label_tag }}
+              {{ form.employee }}
+              <div class="text-danger small mt-1">{{ form.employee.errors }}</div>
+            </div>
+            <div class="col-md-6">
+              {{ form.exception_type.label_tag }}
+              {{ form.exception_type }}
+              <div class="text-danger small mt-1">{{ form.exception_type.errors }}</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              {{ form.start_datetime.label_tag }}
+              {{ form.start_datetime }}
+              <div class="text-danger small mt-1">{{ form.start_datetime.errors }}</div>
+            </div>
+            <div class="col-md-6">
+              {{ form.end_datetime.label_tag }}
+              {{ form.end_datetime }}
+              <div class="text-danger small mt-1">{{ form.end_datetime.errors }}</div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            {{ form.reason.label_tag }}
+            {{ form.reason }}
+            <div class="text-danger small mt-1">{{ form.reason.errors }}</div>
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-dark">{{ submit_label|default:"Сохранить" }}</button>
+            <a href="{% url 'dashboard_exceptions' %}" class="btn btn-outline-secondary">
+              Назад
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "spa_app/pages/layout.html" %}
+
+{% block title %}Отзыв - Lotus Bloom{% endblock %}
+
+{% block content %}
+
+<section class="public-form-section py-5 bg-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-7">
+        <div class="public-form-card card border-0 shadow-sm">
+          <div class="card-body p-4 p-lg-5">
+            <h1 class="h3 title mb-4">
+              {% if review %}Изменить отзыв{% else %}Оставить отзыв{% endif %}
+            </h1>
+
+            <div class="alert alert-light border mb-4">
+              <div class="fw-semibold">{{ appointment.service.name }}</div>
+              <div class="small text-muted">
+                {{ appointment.start_datetime|date:"d.m.Y H:i" }}
+                · {{ appointment.employee.user }}
+              </div>
+            </div>
+
+            <form method="post" class="public-form" novalidate>
+              {% csrf_token %}
+
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+              {% endif %}
+
+              <div class="mb-3">
+                {{ form.rating.label_tag }}
+                {{ form.rating }}
+                <div class="text-danger small mt-1">{{ form.rating.errors }}</div>
+              </div>
+
+              <div class="mb-4">
+                {{ form.text.label_tag }}
+                {{ form.text }}
+                <div class="text-danger small mt-1">{{ form.text.errors }}</div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark">
+                  Сохранить отзыв
+                </button>
+                <a href="{% url 'account' %}" class="btn btn-outline-secondary">
+                  Назад
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

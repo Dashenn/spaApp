@@ -1,0 +1,101 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-4">{{ title }}</h5>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            {{ form.employee.label_tag }}
+            {{ form.employee }}
+            <div class="text-danger small mt-1">{{ form.employee.errors }}</div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              {{ form.weekday.label_tag }}
+              {{ form.weekday }}
+              <div class="text-danger small mt-1">{{ form.weekday.errors }}</div>
+            </div>
+
+            <div class="col-md-6">
+              {{ form.weekday_end.label_tag }}
+              {{ form.weekday_end }}
+              <div class="text-danger small mt-1">{{ form.weekday_end.errors }}</div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              {{ form.start_time.label_tag }}
+              {{ form.start_time }}
+              <div class="text-danger small mt-1">{{ form.start_time.errors }}</div>
+            </div>
+
+            <div class="col-md-6">
+              {{ form.end_time.label_tag }}
+              {{ form.end_time }}
+              <div class="text-danger small mt-1">{{ form.end_time.errors }}</div>
+            </div>
+          </div>
+
+          <div class="form-check form-switch mt-4">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+              {{ form.is_active.label }}
+            </label>
+          </div>
+          <div class="text-danger small mt-1">{{ form.is_active.errors }}</div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-dark">{{ submit_label|default:"Сохранить" }}</button>
+            <a href="{% url 'dashboard_schedules' %}" class="btn btn-outline-secondary">
+              Назад
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h6 class="mb-3">Что важно</h6>
+        <ul class="mb-0 ps-3">
+          <li>Можно задать диапазон дней недели одним действием, например с понедельника по пятницу.</li>
+          <li>Для одного сотрудника рабочие интервалы в один и тот же день недели не должны пересекаться.</li>
+          <li>Время начала должно быть раньше времени окончания, иначе форма не сохранится.</li>
+          <li>Неактивный интервал останется в CRM, но не должен участвовать в рабочем расписании.</li>
+        </ul>
+      </div>
+    </div>
+
+    {% if schedule %}
+    <div class="card shadow-sm mt-4">
+      <div class="card-body">
+        <h6 class="mb-3">Текущий интервал</h6>
+        <div class="mb-2"><strong>Сотрудник:</strong> {{ schedule.employee.user }}</div>
+        <div class="mb-2"><strong>День:</strong> {{ schedule.get_weekday_display }}</div>
+        <div class="mb-0"><strong>Время:</strong> {{ schedule.start_time|time:"H:i" }} - {{ schedule.end_time|time:"H:i" }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

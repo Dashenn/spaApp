@@ -1,0 +1,349 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}Аналитика{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h5>
+      Сводка по финансам, записям, сотрудникам и клиентской активности за {{ month_label }}
+    </h5>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100 dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Выручка за месяц</div>
+        <h3 class="mb-0">{{ paid_this_month }} ₽</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100 dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Неоплаченные суммы</div>
+        <h3 class="mb-0">{{ pending_payments_total }} ₽</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100 dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Средний чек</div>
+        <h3 class="mb-0">{{ average_ticket|floatformat:2 }} ₽</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Записей в этом месяце</div>
+        <h3 class="mb-0">{{ month_appointments_count }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Выполнено</div>
+        <h3 class="mb-0">{{ completed_this_month }}</h3>
+        <div class="small text-muted mt-1">Конверсия: {{ completion_rate }}%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Отменено</div>
+        <h3 class="mb-0">{{ cancelled_this_month }}</h3>
+        <div class="small text-muted mt-1">Доля отмен: {{ cancellation_rate }}%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm h-100 dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Ближайшие 7 дней</div>
+        <h3 class="mb-0">{{ upcoming_week_appointments }}</h3>
+        <div class="small text-muted mt-1">Активных записей впереди</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Выручка за 6 месяцев</h6>
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Распределение оплат</h6>
+        <canvas id="paymentsChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Популярные услуги</h6>
+        <canvas id="servicesChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Клиенты и репутация</h6>
+
+        <div class="row g-3">
+          <div class="col-sm-4">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Активных клиентов за месяц</div>
+              <div class="fw-semibold fs-4">{{ active_clients_this_month }}</div>
+            </div>
+          </div>
+
+          <div class="col-sm-4">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Повторных клиентов</div>
+              <div class="fw-semibold fs-4">{{ repeat_clients_count }}</div>
+            </div>
+          </div>
+
+          <div class="col-sm-4">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Средняя оценка</div>
+              <div class="fw-semibold fs-4">
+                {% if average_rating %}
+                  {{ average_rating|floatformat:1 }}/5
+                {% else %}
+                  Нет данных
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Финансовая динамика за 6 месяцев</h6>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Месяц</th>
+                <th>Оплаченных записей</th>
+                <th>Выручка</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for row in monthly_trend %}
+              <tr>
+                <td>{{ row.label }}</td>
+                <td>{{ row.count }}</td>
+                <td>{{ row.total }} ₽</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="mb-3">Загрузка сотрудников</h6>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Сотрудник</th>
+                <th>Записей</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for employee in employee_stats %}
+              <tr>
+                <td>{{ employee.full_name }}</td>
+                <td>{{ employee.total_appointments }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-muted">Нет данных по сотрудникам</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ chart_data|json_script:"analytics-chart-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const element = document.getElementById("analytics-chart-data");
+
+  if (!element) {
+    return;
+  }
+
+  const data = JSON.parse(element.textContent);
+
+  const colors = {
+    pink: "#df68a7",
+    green: "#16a66a",
+    yellow: "#c9861f",
+    gray: "#8a96ab"
+  };
+
+  const baseOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        labels: {
+          color: "#59647a",
+          font: {
+            family: "Inter, Segoe UI, Roboto, Arial, sans-serif"
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: "#8a96ab"
+        },
+        grid: {
+          color: "rgba(232, 237, 245, 0.8)"
+        }
+      },
+      y: {
+        ticks: {
+          color: "#8a96ab"
+        },
+        grid: {
+          color: "rgba(232, 237, 245, 0.8)"
+        }
+      }
+    }
+  };
+
+  new Chart(document.getElementById("revenueChart"), {
+    type: "line",
+    data: {
+      labels: data.months.labels,
+      datasets: [
+        {
+          label: "Выручка",
+          data: data.months.revenue,
+          borderColor: colors.pink,
+          backgroundColor: "rgba(223, 104, 167, 0.15)",
+          tension: 0.35,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      ...baseOptions,
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("paymentsChart"), {
+    type: "doughnut",
+    data: {
+      labels: data.payments.labels,
+      datasets: [
+        {
+          data: data.payments.values,
+          backgroundColor: [
+            colors.green,
+            colors.yellow,
+            colors.gray
+          ],
+          borderWidth: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: "bottom"
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("servicesChart"), {
+    type: "bar",
+    data: {
+      labels: data.services.labels,
+      datasets: [
+        {
+          label: "Количество записей",
+          data: data.services.values,
+          backgroundColor: colors.pink,
+          borderRadius: 8
+        }
+      ]
+    },
+    options: {
+      ...baseOptions,
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  });
+});
+</script>
+
+{% endblock %}

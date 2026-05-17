@@ -1,0 +1,67 @@
+{% extends "spa_app/pages/layout.html" %}
+{% load static %}
+
+{% block title %}Услуги - Lotus Bloom{% endblock %}
+
+{% block content %}
+{% include 'spa_app/banner_slider.html' %}
+
+<section class="container py-2">
+  <h2 class="text-center mb-5 title">Наши услуги</h2>
+
+  {% for category in categories %}
+  <div class="service-detail-card card mb-5 border-0 shadow-lg overflow-hidden">
+    <div class="row g-0">
+      <div class="col-md-4 position-relative">
+        <div class="ratio ratio-1x1">
+          {% if category.image %}
+          <img
+            src="{{ category.image.url }}"
+            alt="{{ category.name }}"
+            class="img-fluid object-fit-cover"
+          />
+          {% else %}
+          <img
+            src="{% static 'spa_app/img/default_category.png' %}"
+            class="img-fluid object-fit-cover"
+            alt="{{ category.name }}"
+          />
+          {% endif %}
+        </div>
+        <div class="category-overlay p-3">
+          <h3 class="fs-3 fw-bold mb-0">{{ category.name }}</h3>
+        </div>
+      </div>
+      <div class="col-md-8 bg-light">
+        <div class="p-4">
+          {% if category.services.all %}
+          <div class="service-list">
+            {% for service in category.services.all %}
+            <div
+              class="service-item d-flex justify-content-between align-items-center gap-3 p-3 mb-2 bg-white rounded"
+            >
+              <span class="service-name"
+                >{{ service.name }} ({{ service.duration_minutes }} минут)</span
+              >
+
+              <div class="d-flex align-items-center">
+                <span class="price me-3">{{ service.price }} ₽</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-4">
+            <i class="bi bi-calendar-x fs-1 text-muted"></i>
+            <p class="text-muted mt-2">Скоро новые услуги!</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+{% include 'spa_app/form-page.html' %}
+{% endblock %}

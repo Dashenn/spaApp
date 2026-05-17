@@ -1,0 +1,57 @@
+{% extends "spa_app/pages/layout.html" %}
+
+{% block title %}Контакты - Lotus Bloom{% endblock %}
+
+{% block content %}
+
+<section class="container py-5">
+  <h2 class="mb-5 title text-center">Контакты</h2>
+
+  <div class="row g-4 text-center">
+    <div class="col-md-4">
+      <div class="contact-item">
+        <h4 class="contact-title mb-3">Адрес</h4>
+        <p class="contact-info">г. Таганрог, ул. Петровская, 132 (9:00 - 21:00)</p>
+        <div class="contact-icon">
+          <i class="bi bi-geo-alt fs-3"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="contact-item">
+        <h4 class="contact-title mb-3">Телефон</h4>
+        <p class="contact-info">+7 (8634) 55-55-55</p>
+        <div class="contact-icon">
+          <i class="bi bi-telephone fs-3"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="contact-item">
+        <h4 class="contact-title mb-3">Почта</h4>
+        <p class="contact-info">info@lotusbloom.ru</p>
+        <div class="contact-icon">
+          <i class="bi bi-envelope fs-3"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="map-section my-5">
+  <div class="container">
+    <h2 class="text-center mb-4 title">Мы на карте</h2>
+    <div class="map-container">
+      <iframe
+        class="map-frame"
+        src="https://yandex.ru/map-widget/v1/?um=constructor%3A56411ed18e7d4a10f1272845ed4aae381bb8ee71d6cc11bcc9e2c52aa70ad2f8&amp;source=constructor"
+        loading="lazy"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "spa_app/pages/layout.html" %}
+
+{% block title %}Вход - Lotus Bloom{% endblock %}
+
+{% block content %}
+
+<section class="public-form-section public-auth-section py-5 bg-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6 col-lg-5">
+        <div class="public-form-card card border-0 shadow-sm">
+          <div class="card-body p-4 p-lg-5">
+            <h2 class="title text-center mb-4">Вход</h2>
+
+            <form method="post" class="public-form" novalidate>
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ next }}" />
+
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+              {% endif %}
+
+              <div class="mb-3">
+                {{ form.identifier.label_tag }}
+                {{ form.identifier }}
+                <div class="text-danger small mt-1">{{ form.identifier.errors }}</div>
+              </div>
+
+              <div class="mb-4">
+                {{ form.password.label_tag }}
+                {{ form.password }}
+                <div class="text-danger small mt-1">{{ form.password.errors }}</div>
+              </div>
+
+              <button type="submit" class="btn btn-dark w-100">Войти</button>
+            </form>
+
+            <div class="text-center mt-4">
+              <span class="text-muted">Еще нет аккаунта?</span>
+              <a href="{% url 'register' %}" class="ms-1">Зарегистрироваться</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

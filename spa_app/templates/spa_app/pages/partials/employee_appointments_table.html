@@ -1,0 +1,38 @@
+<div class="table-responsive">
+  <table class="table align-middle mb-0">
+    <thead>
+      <tr>
+        <th>Дата и время</th>
+        <th>Клиент</th>
+        <th>Услуга</th>
+        <th>Статус</th>
+        <th>Комментарий</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for appointment in appointments %}
+      <tr>
+        <td>
+          <div>{{ appointment.start_local|date:"d.m.Y" }}</div>
+          <div class="small text-muted">
+            {{ appointment.start_local|date:"H:i" }} - {{ appointment.end_local|date:"H:i" }}
+          </div>
+        </td>
+        <td>
+          <div>{{ appointment.client_full_name }}</div>
+          <div class="small text-muted">{{ appointment.client.user.phone_number }}</div>
+        </td>
+        <td>{{ appointment.service.name }}</td>
+        <td>{{ appointment.get_status_display }}</td>
+        <td>{{ appointment.comment|default:"-" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-muted text-center py-3">
+          {{ empty_text }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

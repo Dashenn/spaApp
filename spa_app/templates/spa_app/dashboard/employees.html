@@ -1,0 +1,96 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}Сотрудники{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="mb-1">Команда салона</h6>
+
+  <a href="{% url 'employee_create' %}" class="btn btn-dark">
+    Добавить сотрудника
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ФИО</th>
+          <th>Должность</th>
+          <th>Контакты</th>
+          <th>Опыт</th>
+          <th>График</th>
+          <th>Статус</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for e in employees %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ e.full_name }}</div>
+            <div class="small text-muted">
+              {% if e.description %}
+              {{ e.description|truncatechars:80 }}
+              {% else %}
+              Описание не заполнено
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <div>{{ e.position }}</div>
+            <div class="small text-muted">
+              {% if e.hire_date %}
+              Принят: {{ e.hire_date|date:"d.m.Y" }}
+              {% else %}
+              Дата приема не указана
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <div>Логин: {{ e.username }}</div>
+            <div>{{ e.phone }}</div>
+            <div>{{ e.email }}</div>
+          </td>
+          <td>{{ e.experience_years }} лет</td>
+          <td>
+            <div>{{ e.schedule_summary }}</div>
+            {% if e.schedule_summary == "Не настроено" %}
+            <div class="small text-muted">Выберите дни и время в карточке сотрудника</div>
+            {% endif %}
+          </td>
+          <td>
+            {% if e.is_active %}
+            <span class="badge bg-success">Активен</span>
+            {% else %}
+            <span class="badge bg-secondary">Неактивен</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <form method="post" action="{% url 'employee_send_invitation' e.id %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary">
+                Ссылка для пароля
+              </button>
+            </form>
+            <a href="{% url 'employee_update' e.id %}" class="btn btn-sm btn-outline-dark">
+              Редактировать
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4">
+            Нет сотрудников
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

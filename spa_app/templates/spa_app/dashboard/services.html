@@ -1,0 +1,78 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}Услуги{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="mb-1">Каталог услуг</h6>
+
+  <a href="{% url 'service_create' %}" class="btn btn-dark">
+    Добавить услугу
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Услуга</th>
+          <th>Категория</th>
+          <th>Цена</th>
+          <th>Длительность</th>
+          <th>Специалисты</th>
+          <th>Статус</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for s in services %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ s.name }}</div>
+            <div class="small text-muted">
+              {% if s.description %}
+              {{ s.description|truncatechars:90 }}
+              {% else %}
+              Описание не заполнено
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ s.category.name }}</td>
+          <td>{{ s.price }} руб.</td>
+          <td>{{ s.duration_minutes }} мин</td>
+          <td class="">
+            {% for employee in s.employees.all %}
+            <span>{{ employee.user }} | {{ employee.position }}</span>
+            {% empty %}
+            <span class="text-muted">Специалисты не назначены</span>
+            {% endfor %}
+          </td>
+          <td>
+            {% if s.is_active %}
+            <span class="badge bg-success">Активна</span>
+            {% else %}
+            <span class="badge bg-secondary">Неактивна</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'service_update' s.id %}" class="btn btn-sm btn-outline-dark">
+              Редактировать
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4">
+            Нет услуг
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

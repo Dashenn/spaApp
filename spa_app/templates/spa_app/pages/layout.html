@@ -1,0 +1,213 @@
+{% load static %}
+<!DOCTYPE html>
+
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Lotus Bloom{% endblock %}</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"
+    />
+    <link rel="stylesheet" href="{% static 'spa_app/css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'spa_app/css/notifications.css' %}" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+      defer
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.js"></script>
+    <script src="{% static 'spa_app/js/script.js' %}" defer></script>
+    <link
+      rel="icon"
+      href="{% static 'spa_app/img/svg/logo.svg' %}"
+      type="image/svg"
+    />
+  </head>
+  <body>
+    <header class="custom-nav">
+      <div class="container">
+        <div class="custom-nav-inner d-flex justify-content-between align-items-center py-2 flex-wrap gap-3">
+          <div class="d-flex align-items-center">
+            <a href="{% url 'index' %}">
+              <img
+                src="{% static 'spa_app/img/svg/logo.svg' %}"
+                alt="Logo"
+                class="site-logo"
+              />
+            </a>
+            <div class="custom-nav-social d-flex gap-2">
+              <a href="https://vk.com/nooname_e" target="_blank"
+                ><img src="{% static 'spa_app/img/svg/vk.svg' %}" alt="VK"
+              /></a>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 flex-wrap justify-content-end">
+            <nav class="navbar navbar-expand-lg p-0">
+              <button
+                class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#mainNav"
+                aria-controls="mainNav"
+                aria-expanded="false"
+                aria-label="Toggle navigation"
+              >
+                <span class="navbar-toggler-icon"></span>
+              </button>
+
+              <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav main-menu me-auto mb-2 mb-lg-0">
+                  <li class="nav-item">
+                    <a
+                      class="nav-link {% if active_page == 'index' %}active{% endif %}"
+                      href="{% url 'index' %}"
+                    >
+                      Главная
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      class="nav-link {% if active_page == 'services' %}active{% endif %}"
+                      href="{% url 'services' %}"
+                    >
+                      Услуги
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      class="nav-link {% if active_page == 'about' %}active{% endif %}"
+                      href="{% url 'about' %}"
+                    >
+                      О нас
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a
+                      class="nav-link {% if active_page == 'contact' %}active{% endif %}"
+                      href="{% url 'contact' %}"
+                    >
+                      Контакты
+                    </a>
+                  </li>
+                  {% if request.user.is_authenticated %}
+                  <li class="nav-item">
+                    <a
+                      class="nav-link {% if active_page == 'account' %}active{% endif %}"
+                      href="{% url 'account' %}"
+                    >
+                      Личный кабинет
+                    </a>
+                  </li>
+                  {% endif %}
+                </ul>
+              </div>
+            </nav>
+
+            <div class="header-actions d-flex align-items-center gap-2 flex-wrap">
+              {% if request.user.is_authenticated %}
+              {% if request.user.role == 'admin' %}
+              <a href="{% url 'dashboard_home' %}" class="nav-action nav-action--primary">
+                Дашборд
+              </a>
+              {% endif %}
+              {% if request.user.role == 'employee' %}
+              <a href="{% url 'employee_portal' %}" class="nav-action nav-action--primary {% if active_page == 'employee_portal' %}active{% endif %}">
+                Дашборд
+              </a>
+              {% endif %}
+              <form method="post" action="{% url 'logout' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="nav-action nav-action--logout">Выход</button>
+              </form>
+              {% else %}
+              <a href="{% url 'login' %}" class="nav-action nav-action--ghost {% if active_page == 'login' %}active{% endif %}">Вход</a>
+              <a href="{% url 'register' %}" class="nav-action nav-action--primary {% if active_page == 'register' %}active{% endif %}">Регистрация</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      {% include "spa_app/includes/messages.html" %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer py-4">
+      <div class="container">
+        <div class="row align-items-center text-center text-md-start">
+          <div class="col-md-4 mb-4 mb-md-0">
+            <div class="mb-3 d-flex align-items-start">
+              <i class="bi bi-geo-alt me-2 mt-1 text-primary"></i>
+              <div>г. Таганрог, улица Петровская, дом 132 (9:00 - 21:00)</div>
+            </div>
+            <div class="mb-3 d-flex align-items-start">
+              <i class="bi bi-telephone me-2 mt-1 text-primary"></i>
+              <div>+7 918 563-71-83</div>
+            </div>
+            <div class="mb-3 d-flex align-items-start">
+              <i class="bi bi-envelope me-2 mt-1 text-primary"></i>
+              <div>lotus.bloom@yandex.ru</div>
+            </div>
+            <div class="d-flex gap-2 mt-2">
+              <a href="https://vk.com/nooname_e" target="_blank"
+                ><img
+                  src="{% static 'spa_app/img/svg/vk.svg' %}"
+                  alt="VK"
+                  width="24"
+              /></a>
+            </div>
+          </div>
+          <div class="col-md-4 mb-4 mb-md-0 text-center">
+            <img
+              src="{% static 'spa_app/img/svg/footer-logo.svg' %}"
+              alt="Lotus Bloom"
+              class="img-fluid footer-logo"
+            />
+          </div>
+          <div class="col-md-4">
+            <div
+              class="d-flex flex-column align-items-center align-items-md-end gap-2"
+            >
+              <ul class="navbar-nav mb-2 mb-lg-0">
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'index' %}">Главная</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'services' %}">Услуги</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'about' %}">О нас</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'contact' %}">Контакты</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

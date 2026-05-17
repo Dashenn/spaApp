@@ -1,0 +1,66 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}График работы{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h6 class="mb-1">Графики сотрудников</h6>
+    <small class="text-muted">
+      Упрощенный график теперь хранится прямо в профиле сотрудника: дни недели и единое рабочее время.
+    </small>
+  </div>
+
+  <a href="{% url 'employee_create' %}" class="btn btn-dark">
+    Добавить сотрудника
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Сотрудник</th>
+          <th>Рабочие дни</th>
+          <th>Время</th>
+          <th>Сводка</th>
+          <th>Статус</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for employee in employees %}
+        <tr>
+          <td>{{ employee.full_name }}</td>
+          <td>{{ employee.work_days_display }}</td>
+          <td>{{ employee.work_time_display }}</td>
+          <td>{{ employee.schedule_summary }}</td>
+          <td>
+            {% if employee.is_active %}
+            <span class="badge bg-success">Активен</span>
+            {% else %}
+            <span class="badge bg-secondary">Неактивен</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'schedule_update' employee.id %}" class="btn btn-sm btn-outline-dark">
+              Редактировать
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-4">
+            Нет сотрудников
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

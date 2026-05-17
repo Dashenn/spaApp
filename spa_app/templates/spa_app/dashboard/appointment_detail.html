@@ -1,0 +1,181 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}Детали записи{% endblock %}
+
+{% block content %}
+
+<div class="row g-4 align-items-stretch">
+  <div class="col-md-8">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h5 class="mb-4">Информация о записи</h5>
+
+        <div class="mb-3">
+          <strong>Услуга:</strong> {{ appointment.service.name }}
+        </div>
+
+        <div class="mb-3">
+          <strong>Стоимость:</strong> {{ appointment.service.price }} ₽
+        </div>
+
+        <div class="mb-3">
+          <strong>Сотрудник:</strong> {{ appointment.employee.user }}
+        </div>
+
+        <div class="mb-3">
+          <strong>Дата и время начала:</strong>
+          {{ appointment.start_datetime|date:"d.m.Y H:i" }}
+        </div>
+
+        <div class="mb-3">
+          <strong>Дата и время окончания:</strong>
+          {{ appointment.end_datetime|date:"d.m.Y H:i" }}
+        </div>
+
+        <div class="mb-3">
+          <strong>Продолжительность:</strong>
+          {{ appointment.service.duration_minutes }} мин
+        </div>
+
+        <div class="mb-3">
+          <strong>Статус:</strong>
+          <span class="badge bg-secondary">
+            {{ appointment.get_status_display }}
+          </span>
+        </div>
+
+        <div class="mb-3">
+          <strong>Комментарий:</strong><br>
+          {% if appointment.comment %}
+          {{ appointment.comment }}
+          {% else %}
+          <span class="text-muted">Не указано</span>
+          {% endif %}
+        </div>
+
+        <div class="mb-0">
+          <strong>Создана:</strong> {{ appointment.created_at|date:"d.m.Y H:i" }}<br>
+          <strong>Обновлена:</strong> {{ appointment.updated_at|date:"d.m.Y H:i" }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 d-flex flex-column">
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h5 class="mb-4">Клиент</h5>
+
+        <div class="mb-2">
+          <strong>Фамилия:</strong><br>
+          {{ appointment.client.user.last_name|default:"Не указано" }}
+        </div>
+
+        <div class="mb-2">
+          <strong>Имя:</strong><br>
+          {{ appointment.client.user.first_name|default:"Не указано" }}
+        </div>
+
+        <div class="mb-2">
+          <strong>Отчество:</strong><br>
+          {{ appointment.client.user.middle_name|default:"Не указано" }}
+        </div>
+
+        <div class="mb-2">
+          <strong>Телефон:</strong><br>
+          {{ appointment.client.user.phone_number|default:"Не указано" }}
+        </div>
+
+        <div class="mb-0">
+          <strong>Email:</strong><br>
+          {{ appointment.client.user.email|default:"Не указано" }}
+        </div>
+
+        <div class="mt-3">
+          <a href="{% url 'dashboard_client_detail' appointment.client.id %}" class="btn btn-sm btn-outline-dark">
+            Открыть карточку клиента
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm flex-grow-1">
+      <div class="card-body">
+        <h5 class="mb-3">Оплата</h5>
+
+        <div class="mb-2">
+          <strong>Сумма:</strong> {{ appointment.service.price }} ₽
+        </div>
+
+        <div class="mb-3">
+          <strong>Статус:</strong>
+          {% if appointment.is_paid %}
+          <span class="badge bg-success">Оплачено</span>
+          {% else %}
+          <span class="badge bg-warning">Не оплачено</span>
+          {% endif %}
+        </div>
+
+        {% if appointment.paid_at %}
+        <div class="mb-3">
+          <strong>Дата оплаты:</strong><br>
+          {{ appointment.paid_at|date:"d.m.Y H:i" }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'toggle_appointment_payment' appointment.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-dark">
+            {% if appointment.is_paid %}
+            Отметить как не оплаченную
+            {% else %}
+            Отметить как оплаченную
+            {% endif %}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+  <div class="card-body">
+    <h5 class="mb-3">Отзыв</h5>
+
+    {% if appointment.review %}
+    <div class="mb-2">
+      <strong>Оценка:</strong> {{ appointment.review.rating }}/5
+    </div>
+    <div>
+      <strong>Текст:</strong><br>
+      {{ appointment.review.text }}
+    </div>
+    {% else %}
+    <span class="text-muted">Отзыв по этой записи пока не оставлен.</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card shadow-sm mt-4">
+  <div class="card-body">
+    <h5 class="mb-3">Действия</h5>
+
+    {% if appointment.status == "created" %}
+    <a href="{% url 'change_appointment_status' appointment.id 'confirmed' %}" class="btn btn-success">Подтвердить</a>
+    <a href="{% url 'change_appointment_status' appointment.id 'cancelled' %}" class="btn btn-outline-danger">Отменить</a>
+    {% elif appointment.status == "confirmed" %}
+    <a href="{% url 'change_appointment_status' appointment.id 'completed' %}" class="btn btn-primary">Завершить</a>
+    <a href="{% url 'change_appointment_status' appointment.id 'cancelled' %}" class="btn btn-outline-danger">Отменить</a>
+    {% else %}
+    <span class="text-muted">Нет доступных действий.</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="mt-3">
+  <a href="{% url 'dashboard_appointments' %}" class="btn btn-outline-secondary">
+    Назад к списку
+  </a>
+</div>
+
+{% endblock %}

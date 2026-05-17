@@ -1,0 +1,53 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block title %}CRM-панель{% endblock %}
+{% block page_title %}Главная{% endblock %}
+
+{% block content %}
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Записей сегодня</div>
+        <h3 class="mb-0">{{ today_appointments_count }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Активных сотрудников</div>
+        <h3 class="mb-0">{{ active_employees_count }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Услуг в CRM</div>
+        <h3 class="mb-0">{{ services_count }}</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white">
+    <h5 class="mb-0">Быстрые действия</h5>
+  </div>
+
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-3">
+      <a href="{% url 'dashboard_appointments' %}" class="btn btn-outline-dark">Открыть записи</a>
+      <a href="{% url 'dashboard_clients' %}" class="btn btn-outline-dark">Открыть клиентов</a>
+      <a href="{% url 'employee_create' %}" class="btn btn-outline-dark">Добавить сотрудника</a>
+      <a href="{% url 'exception_create' %}" class="btn btn-outline-dark">Добавить отсутствие</a>
+      <a href="{% url 'dashboard_analytics' %}" class="btn btn-outline-dark">Открыть аналитику</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

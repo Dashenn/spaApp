@@ -1,0 +1,122 @@
+{% extends "spa_app/pages/layout.html" %}
+{% load static %}
+
+{% block title %}О нас - Lotus Bloom{% endblock %}
+
+{% block content %}
+{% include 'spa_app/banner_slider.html' %}
+
+<section class="container py-2">
+  <div class="content-narrow mx-auto">
+    <h2 class="mb-5 title text-center">О нас</h2>
+    <p class="text-justify">
+      SPA-салон «Lotus Bloom» — это не просто место для ухода за телом, а
+      пространство, где можно замедлиться, восстановить силы и уделить внимание
+      себе.
+    </p>
+    <div class="row justify-content-center mb-5 mt-5">
+      <div class="col-12 col-md-8 col-lg-7 text-center">
+        <img
+          src="{% static 'spa_app/img/about_1.jpg' %}"
+          alt="about"
+          class="img-fluid about-image"
+        />
+      </div>
+    </div>
+    <p class="text-justify">
+      Мы уделяем особое внимание атмосфере, качеству сервиса и специалистам,
+      которые действительно любят свою работу. Для нас важно, чтобы каждый
+      визит был комфортным и заметно улучшал самочувствие клиента.
+    </p>
+
+    <p class="text-justify">
+      Сегодня Lotus Bloom — это команда специалистов, современный подход к
+      уходу и набор услуг, который помогает расслабиться, восстановиться и
+      почувствовать себя лучше.
+    </p>
+    <div class="row justify-content-center mb-5 mt-5">
+      <div class="col-12 col-md-8 col-lg-7 text-center">
+        <img
+          src="{% static 'spa_app/img/about_2.jpg' %}"
+          alt="about"
+          class="img-fluid about-image"
+        />
+      </div>
+    </div>
+    <p class="text-justify">
+      Мы продолжаем развиваться и расширять сервис, сохраняя главное:
+      внимательное отношение к клиенту и ощущение спокойствия с первых минут
+      визита.
+    </p>
+  </div>
+</section>
+
+<section class="specialists-section">
+  <div class="container">
+    <h2 class="title mb-5">Наши специалисты</h2>
+    <div class="row justify-content-center">
+      {% for specialist in specialists %}
+      <div class="col-md-4 specialist-card mb-4">
+        {% if specialist.photo %}
+        <img
+          src="{{ specialist.photo.url }}"
+          alt="{{ specialist.user.first_name }} {{ specialist.user.last_name }}"
+        />
+        {% else %}
+        <img src="{% static 'spa_app/img/default.png' %}" alt="Фото отсутствует" />
+        {% endif %}
+        <div class="specialist-name">
+          {{ specialist.user.first_name }} {{ specialist.user.last_name }}
+        </div>
+        <div class="specialist-specialty">{{ specialist.position }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="photo-row pt-5 mb-5">
+  <div class="container-fluid px-0 mt-5">
+    <div class="row gx-0">
+      <div class="col">
+        <img
+          src="{% static 'spa_app/img/gallery_1.png' %}"
+          class="img-fluid w-100"
+          alt="Фото 1"
+        />
+      </div>
+      <div class="col">
+        <img
+          src="{% static 'spa_app/img/gallery_2.png' %}"
+          class="img-fluid w-100"
+          alt="Фото 2"
+        />
+      </div>
+      <div class="col">
+        <img
+          src="{% static 'spa_app/img/gallery_3.png' %}"
+          class="img-fluid w-100"
+          alt="Фото 3"
+        />
+      </div>
+      <div class="col">
+        <img
+          src="{% static 'spa_app/img/gallery_4.png' %}"
+          class="img-fluid w-100"
+          alt="Фото 4"
+        />
+      </div>
+      <div class="col">
+        <img
+          src="{% static 'spa_app/img/gallery_5.png' %}"
+          class="img-fluid w-100"
+          alt="Фото 5"
+        />
+      </div>
+    </div>
+  </div>
+</section>
+
+{% include 'spa_app/form-page.html' %}
+
+{% endblock %}

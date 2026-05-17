@@ -1,0 +1,122 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}Оплата{% endblock %}
+
+{% block content %}
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Оплачено</div>
+        <h3 class="mb-0">{{ paid_total }} ₽</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Ожидает оплаты</div>
+        <h3 class="mb-0">{{ pending_total }} ₽</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm dashboard-stat">
+      <div class="card-body">
+        <div class="text-muted small">Возвращено</div>
+        <h3 class="mb-0">{{ refunded_total }} ₽</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Сотрудник</label>
+        <select name="employee" class="form-select">
+          <option value="">Все сотрудники</option>
+          {% for employee in employees %}
+          <option value="{{ employee.id }}" {% if selected_employee == employee.id|stringformat:"s" %}selected{% endif %}>
+            {{ employee.user }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Статус оплаты</label>
+        <select name="payment_status" class="form-select">
+          <option value="">Все статусы</option>
+          <option value="pending" {% if selected_payment_status == "pending" %}selected{% endif %}>Ожидает оплаты</option>
+          <option value="paid" {% if selected_payment_status == "paid" %}selected{% endif %}>Оплачено</option>
+          <option value="cancelled" {% if selected_payment_status == "cancelled" %}selected{% endif %}>Отменена</option>
+          <option value="refunded" {% if selected_payment_status == "refunded" %}selected{% endif %}>Возвращено</option>
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button class="btn btn-dark">Применить</button>
+        <a href="{% url 'dashboard_payments' %}" class="btn btn-outline-secondary">Сбросить</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Запись</th>
+          <th>Клиент</th>
+          <th>Сотрудник</th>
+          <th>Сумма</th>
+          <th>Статус</th>
+          <th>Способ</th>
+          <th>Дата оплаты</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in payment_rows %}
+        <tr>
+          <td>
+            <div>
+              {{ row.appointment.service.name }} · {{ row.appointment.start_datetime|date:"d.m.Y H:i" }}
+            </div>
+          </td>
+          <td>
+              {{ row.client_full_name }}
+          </td>
+          <td>{{ row.employee_full_name }}</td>
+          <td>{{ row.amount }} ₽</td>
+          <td><span class="badge bg-{{ row.status_badge }}">{{ row.status_label }}</span></td>
+          <td>{{ row.method_label }}</td>
+          <td>
+            {% if row.paid_at %}
+            {{ row.paid_at|date:"d.m.Y H:i" }}
+            {% else %}
+            <span>Не указана</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'appointment_detail' row.appointment.id %}" class="btn btn-sm btn-outline-secondary">
+              Запись
+            </a>
+            <a href="{% url 'payment_update' row.appointment.id %}" class="btn btn-sm btn-outline-dark">
+              {% if row.payment %}Редактировать{% else %}Оформить{% endif %}
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center py-4">Платежей пока нет</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+<div class="row g-5">
+  <div class="col-lg-12">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-4">{{ title }}</h5>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if next_page %}
+          <input type="hidden" name="next" value="{{ next_page }}">
+          {% endif %}
+
+          <div class="mb-3">
+            {{ form.name.label_tag }}
+            {{ form.name }}
+            <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+          </div>
+
+          <div class="mb-3">
+            {{ form.category.label_tag }}
+            {{ form.category }}
+            <div class="text-danger small mt-1">{{ form.category.errors }}</div>
+          </div>
+
+          <div class="mb-3">
+            {{ form.description.label_tag }}
+            {{ form.description }}
+            <div class="form-text">Коротко опишите, что входит в услугу.</div>
+            <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              {{ form.price.label_tag }}
+              {{ form.price }}
+              <div class="text-danger small mt-1">{{ form.price.errors }}</div>
+            </div>
+
+            <div class="col-md-6">
+              {{ form.duration_minutes.label_tag }}
+              {{ form.duration_minutes }}
+              <div class="text-danger small mt-1">{{ form.duration_minutes.errors }}</div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <label class="form-label d-block">{{ form.employees.label }}</label>
+            <div class="form-text mb-2">{{ form.employees.help_text }}</div>
+
+            <div class="border rounded p-3 bg-light">
+              {% for checkbox in form.employees %}
+              <label class="form-check d-flex align-items-start gap-2 mb-2">
+                {{ checkbox.tag }}
+                <span>{{ checkbox.choice_label }}</span>
+              </label>
+              {% empty %}
+              <div class="text-muted">Нет доступных специалистов.</div>
+              {% endfor %}
+            </div>
+
+            <div class="text-danger small mt-1">{{ form.employees.errors }}</div>
+          </div>
+
+          <div class="form-check form-switch mt-4">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+              {{ form.is_active.label }}
+            </label>
+          </div>
+          <div class="text-danger small mt-1">{{ form.is_active.errors }}</div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-dark">{{ submit_label|default:"Сохранить" }}</button>
+            <a href="{% if next_page == 'categories' %}{% url 'dashboard_service_categories' %}{% else %}{% url 'dashboard_services' %}{% endif %}" class="btn btn-outline-secondary">
+              Назад
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}Категории услуг{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h6 class="mb-1">Каталог категорий услуг</h6>
+
+  <a href="{% url 'service_category_create' %}" class="btn btn-dark">
+    Добавить категорию
+  </a>
+</div>
+
+{% for category in categories %}
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+  <div class="d-flex justify-content-between align-items-start gap-3">
+
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+        <h5 class="mb-0">{{ category.name }}</h5>
+
+        {% if category.is_active %}
+        <span class="badge bg-success">Активна</span>
+        {% else %}
+        <span class="badge bg-secondary">Неактивна</span>
+        {% endif %}
+      </div>
+
+      <div class="small text-muted mb-2">
+        {{ category.services_count }} услуг
+      </div>
+
+      <div>
+        {% if category.description %}
+        {{ category.description|truncatechars:180 }}
+        {% else %}
+        <span class="text-muted">Описание не заполнено</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-shrink-0">
+      <a href="{% url 'service_create' %}?category={{ category.id }}&next=categories" class="btn btn-sm btn-dark">
+        Добавить услугу
+      </a>
+
+      <a href="{% url 'service_category_update' category.id %}" class="btn btn-sm btn-outline-dark">
+        Редактировать
+      </a>
+    </div>
+
+  </div>
+</div>
+
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Услуга</th>
+          <th>Цена</th>
+          <th>Длительность</th>
+          <th>Специалисты</th>
+          <th>Статус</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for service in category.services.all %}
+        <tr>
+          <td>
+            <div class="fw-semibold">{{ service.name }}</div>
+            <div class="small text-muted">
+              {% if service.description %}
+              {{ service.description|truncatechars:90 }}
+              {% else %}
+              Описание не заполнено
+              {% endif %}
+            </div>
+          </td>
+          <td>{{ service.price }} руб.</td>
+          <td>{{ service.duration_minutes }} мин</td>
+          <td class="dashboard-employee-badges">
+            {% for employee in service.employees.all %}
+            <span>{{ employee.user }} | {{ employee.position }}</span>
+            {% empty %}
+            <span class="text-muted">Специалисты не назначены</span>
+            {% endfor %}
+          </td>
+          <td>
+            {% if service.is_active %}
+            <span class="badge bg-success">Активна</span>
+            {% else %}
+            <span class="badge bg-secondary">Неактивна</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'service_update' service.id %}?next=categories" class="btn btn-sm btn-outline-dark">
+              Редактировать услугу
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-4 text-muted">
+            В этой категории пока нет услуг.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% empty %}
+<div class="card shadow-sm">
+  <div class="card-body text-center py-5">
+    <h6 class="mb-2">Категорий пока нет</h6>
+    <div class="text-muted mb-4">Создайте первую категорию, чтобы группировать услуги в каталоге.</div>
+    <a href="{% url 'service_category_create' %}" class="btn btn-dark">Добавить категорию</a>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

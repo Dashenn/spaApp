@@ -1,0 +1,147 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+<div class="row g-4">
+  <div class="col-lg-12">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-4">{{ title }}</h5>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              {{ form.last_name.label_tag }}
+              {{ form.last_name }}
+              <div class="text-danger small mt-1">{{ form.last_name.errors }}</div>
+            </div>
+            <div class="col-md-4">
+              {{ form.first_name.label_tag }}
+              {{ form.first_name }}
+              <div class="text-danger small mt-1">{{ form.first_name.errors }}</div>
+            </div>
+            <div class="col-md-4">
+              {{ form.middle_name.label_tag }}
+              {{ form.middle_name }}
+              <div class="text-danger small mt-1">{{ form.middle_name.errors }}</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-4">
+              {{ form.username.label_tag }}
+              {{ form.username }}
+              <div class="text-danger small mt-1">{{ form.username.errors }}</div>
+              <div class="form-text">По этому логину сотрудник сможет входить после установки пароля.</div>
+            </div>
+            <div class="col-md-4">
+              {{ form.phone_number.label_tag }}
+              {{ form.phone_number }}
+              <div class="text-danger small mt-1">{{ form.phone_number.errors }}</div>
+            </div>
+            <div class="col-md-4">
+              {{ form.email.label_tag }}
+              {{ form.email }}
+              <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+              <div class="form-text">На эту почту уйдет ссылка для создания пароля.</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              {{ form.position.label_tag }}
+              {{ form.position }}
+              <div class="text-danger small mt-1">{{ form.position.errors }}</div>
+            </div>
+            <div class="col-md-6">
+              {{ form.experience_years.label_tag }}
+              {{ form.experience_years }}
+              <div class="text-danger small mt-1">{{ form.experience_years.errors }}</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              {{ form.hire_date.label_tag }}
+              {{ form.hire_date }}
+              <div class="text-danger small mt-1">{{ form.hire_date.errors }}</div>
+            </div>
+            <div class="col-md-6">
+              {{ form.photo.label_tag }}
+              {{ form.photo }}
+              <div class="text-danger small mt-1">{{ form.photo.errors }}</div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            {{ form.description.label_tag }}
+            {{ form.description }}
+            <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+          </div>
+
+          <hr class="my-4">
+
+          <h6 class="mb-3">Рабочий график</h6>
+
+          <div class="mb-3">
+            <label class="form-label">{{ form.work_days.label }}</label>
+            <div class="border rounded p-3 bg-light-subtle">
+              <div class="row row-cols-1 row-cols-md-2 g-2">
+                {% for checkbox in form.work_days %}
+                <div class="col">
+                  <div class="form-check">
+                    {{ checkbox.tag }}
+                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                      {{ checkbox.choice_label }}
+                    </label>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="text-danger small mt-1">{{ form.work_days.errors }}</div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              {{ form.work_start_time.label_tag }}
+              {{ form.work_start_time }}
+              <div class="text-danger small mt-1">{{ form.work_start_time.errors }}</div>
+            </div>
+            <div class="col-md-6">
+              {{ form.work_end_time.label_tag }}
+              {{ form.work_end_time }}
+              <div class="text-danger small mt-1">{{ form.work_end_time.errors }}</div>
+            </div>
+          </div>
+
+          <div class="form-check form-switch mt-4">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+              {{ form.is_active.label }}
+            </label>
+          </div>
+          <div class="text-danger small mt-1">{{ form.is_active.errors }}</div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-dark">{{ submit_label|default:"Сохранить" }}</button>
+            <a href="{% url 'dashboard_employees' %}" class="btn btn-outline-secondary">
+              Назад
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

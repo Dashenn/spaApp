@@ -1,0 +1,110 @@
+<section class="public-form-section public-booking-section py-5" id="booking-form">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-xl-10">
+        <div class="public-form-card card border-0 shadow-sm">
+          <div class="card-body p-4 p-lg-5">
+            <div class="text-center mb-4">
+              <h2 class="title mb-2">Запишитесь на услугу</h2>
+              <p class="text-muted mb-0">
+                Выберите услугу, специалиста и удобное время. Остальное мы аккуратно подтвердим.
+              </p>
+            </div>
+
+            <form
+              method="post"
+              class="public-form booking-form"
+              data-booking-form
+              data-employees-url="{% url 'get_service_employees' %}"
+              data-times-url="{% url 'get_available_times' %}"
+            >
+              {% csrf_token %}
+              <input type="hidden" name="form_type" value="booking" />
+
+              {% for hidden_field in booking_form.hidden_fields %}
+              {{ hidden_field }}
+              {% endfor %}
+
+              {% if booking_form.non_field_errors %}
+              <div class="alert alert-danger">{{ booking_form.non_field_errors }}</div>
+              {% endif %}
+
+              {% if booking_uses_account %}
+              <div class="alert alert-light border mb-4">
+                <div class="fw-semibold mb-1">Вы записываетесь через свой аккаунт</div>
+                <div class="small text-muted">
+                  {{ request.user.last_name }} {{ request.user.first_name }} {{ request.user.middle_name }}
+                  · {{ request.user.phone_number }} · {{ request.user.email }}
+                </div>
+              </div>
+              {% else %}
+              <div class="row g-3 mb-1">
+                <div class="col-md-4">
+                  {{ booking_form.last_name.label_tag }}
+                  {{ booking_form.last_name }}
+                  <div class="text-danger small mt-1">{{ booking_form.last_name.errors }}</div>
+                </div>
+                <div class="col-md-4">
+                  {{ booking_form.first_name.label_tag }}
+                  {{ booking_form.first_name }}
+                  <div class="text-danger small mt-1">{{ booking_form.first_name.errors }}</div>
+                </div>
+                <div class="col-md-4">
+                  {{ booking_form.middle_name.label_tag }}
+                  {{ booking_form.middle_name }}
+                  <div class="text-danger small mt-1">{{ booking_form.middle_name.errors }}</div>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  {{ booking_form.phone_number.label_tag }}
+                  {{ booking_form.phone_number }}
+                  <div class="text-danger small mt-1">{{ booking_form.phone_number.errors }}</div>
+                </div>
+                <div class="col-md-6">
+                  {{ booking_form.email.label_tag }}
+                  {{ booking_form.email }}
+                  <div class="text-danger small mt-1">{{ booking_form.email.errors }}</div>
+                </div>
+              </div>
+              {% endif %}
+
+              <div class="row g-3 mb-1">
+                <div class="col-md-6">
+                  {{ booking_form.service.label_tag }}
+                  {{ booking_form.service }}
+                  <div class="text-danger small mt-1">{{ booking_form.service.errors }}</div>
+                </div>
+                <div class="col-md-6">
+                  {{ booking_form.employee.label_tag }}
+                  {{ booking_form.employee }}
+                  <div class="text-danger small mt-1">{{ booking_form.employee.errors }}</div>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  {{ booking_form.date.label_tag }}
+                  {{ booking_form.date }}
+                  <div class="text-danger small mt-1">{{ booking_form.date.errors }}</div>
+                </div>
+                <div class="col-md-6">
+                  {{ booking_form.time.label_tag }}
+                  {{ booking_form.time }}
+                  <div class="text-danger small mt-1">{{ booking_form.time.errors }}</div>
+                  <div class="text-muted small mt-2" data-duration-info></div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-dark w-100 py-2">
+                Записаться
+              </button>
+            </form>
+            {{ booking_employee_catalog|json_script:"booking-employees-data" }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

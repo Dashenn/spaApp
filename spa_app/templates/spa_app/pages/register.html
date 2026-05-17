@@ -1,0 +1,80 @@
+{% extends "spa_app/pages/layout.html" %}
+
+{% block title %}Регистрация - Lotus Bloom{% endblock %}
+
+{% block content %}
+
+<section class="public-form-section public-auth-section py-5 bg-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-7">
+        <div class="public-form-card card border-0 shadow-sm">
+          <div class="card-body p-4 p-lg-5">
+            <h2 class="title text-center mb-4">Регистрация</h2>
+
+            <form method="post" class="public-form" novalidate>
+              {% csrf_token %}
+
+              {% if form.non_field_errors %}
+              <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+              {% endif %}
+
+              <div class="row g-3 mb-1">
+                <div class="col-md-4">
+                  {{ form.last_name.label_tag }}
+                  {{ form.last_name }}
+                  <div class="text-danger small mt-1">{{ form.last_name.errors }}</div>
+                </div>
+                <div class="col-md-4">
+                  {{ form.first_name.label_tag }}
+                  {{ form.first_name }}
+                  <div class="text-danger small mt-1">{{ form.first_name.errors }}</div>
+                </div>
+                <div class="col-md-4">
+                  {{ form.middle_name.label_tag }}
+                  {{ form.middle_name }}
+                  <div class="text-danger small mt-1">{{ form.middle_name.errors }}</div>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-1">
+                <div class="col-md-6">
+                  {{ form.phone_number.label_tag }}
+                  {{ form.phone_number }}
+                  <div class="text-danger small mt-1">{{ form.phone_number.errors }}</div>
+                </div>
+                <div class="col-md-6">
+                  {{ form.email.label_tag }}
+                  {{ form.email }}
+                  <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                  {{ form.password1.label_tag }}
+                  {{ form.password1 }}
+                  <div class="text-danger small mt-1">{{ form.password1.errors }}</div>
+                </div>
+                <div class="col-md-6">
+                  {{ form.password2.label_tag }}
+                  {{ form.password2 }}
+                  <div class="text-danger small mt-1">{{ form.password2.errors }}</div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-dark w-100">Создать аккаунт</button>
+            </form>
+
+            <div class="text-center mt-4">
+              <span class="text-muted">Уже есть аккаунт?</span>
+              <a href="{% url 'login' %}" class="ms-1">Войти</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

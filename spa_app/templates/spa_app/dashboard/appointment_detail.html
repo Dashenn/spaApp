@@ -116,43 +116,41 @@
           {% endif %}
         </div>
 
-        {% if appointment.paid_at %}
-        <div class="mb-3">
-          <strong>Дата оплаты:</strong><br>
-          {{ appointment.paid_at|date:"d.m.Y H:i" }}
-        </div>
-        {% endif %}
+        {% if appointment.is_paid %}
 
-        <form method="post" action="{% url 'toggle_appointment_payment' appointment.id %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-dark">
-            {% if appointment.is_paid %}
-            Отметить как не оплаченную
-            {% else %}
-            Отметить как оплаченную
-            {% endif %}
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
+<div class="mb-3">
+  <strong>Статус:</strong>
+  <span class="badge bg-success">Оплачено</span>
 </div>
 
-<div class="card shadow-sm mt-4">
-  <div class="card-body">
-    <h5 class="mb-3">Отзыв</h5>
+<div class="mb-3">
+  <strong>Способ оплаты:</strong><br>
+  {{ appointment.get_payment_method_display }}
+</div>
 
-    {% if appointment.review %}
-    <div class="mb-2">
-      <strong>Оценка:</strong> {{ appointment.review.rating }}/5
+{% if appointment.paid_at %}
+<div class="mb-3">
+  <strong>Дата оплаты:</strong><br>
+  {{ appointment.paid_at|date:"d.m.Y H:i" }}
+</div>
+{% endif %}
+
+{% if appointment.is_refunded %}
+<div class="alert alert-danger py-2">
+  Возврат оформлен
+</div>
+{% endif %}
+
+{% else %}
+
+<div class="mb-3">
+  <strong>Статус:</strong>
+  <span class="badge bg-warning text-dark">Не оплачено</span>
+</div>
+
+{% endif %}
+      </div>
     </div>
-    <div>
-      <strong>Текст:</strong><br>
-      {{ appointment.review.text }}
-    </div>
-    {% else %}
-    <span class="text-muted">Отзыв по этой записи пока не оставлен.</span>
-    {% endif %}
   </div>
 </div>
 
@@ -161,15 +159,68 @@
     <h5 class="mb-3">Действия</h5>
 
     {% if appointment.status == "created" %}
-    <a href="{% url 'change_appointment_status' appointment.id 'confirmed' %}" class="btn btn-success">Подтвердить</a>
-    <a href="{% url 'change_appointment_status' appointment.id 'cancelled' %}" class="btn btn-outline-danger">Отменить</a>
-    {% elif appointment.status == "confirmed" %}
-    <a href="{% url 'change_appointment_status' appointment.id 'completed' %}" class="btn btn-primary">Завершить</a>
-    <a href="{% url 'change_appointment_status' appointment.id 'cancelled' %}" class="btn btn-outline-danger">Отменить</a>
+
+    <form method="post" action="{% url 'confirm_appointment' appointment.id %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-dark">
+        Подтвердить
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'change_appointment_status' appointment.id 'cancelled' %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-outline-danger">
+        Отменить
+      </button>
+    </form>
+
+    {% elif appointment.status == "confirmed" and not appointment.is_paid %}
+
+    <form method="post" action="{% url 'accept_appointment_payment' appointment.id %}" class="d-flex gap-2 flex-wrap">
+      {% csrf_token %}
+
+      <select name="payment_method" class="form-select" style="max-width: 220px;">
+        <option value="cash">Наличные</option>
+        <option value="card">Карта</option>
+      </select>
+
+      <button class="btn btn-success">
+        Принять оплату
+      </button>
+    </form>
+
+    {% elif appointment.status == "confirmed" and appointment.is_paid %}
+
+    <form method="post" action="{% url 'change_appointment_status' appointment.id 'completed' %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-primary">
+        Завершить
+      </button>
+    </form>
+
+    <form method="post" action="{% url 'change_appointment_status' appointment.id 'failed' %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-outline-warning">
+        Неуспешно
+      </button>
+    </form>
+
+    {% elif appointment.status == "failed" and appointment.is_paid and not appointment.is_refunded %}
+
+    <form method="post" action="{% url 'refund_appointment_payment' appointment.id %}">
+      {% csrf_token %}
+      <button class="btn btn-outline-danger">
+        Оформить возврат
+      </button>
+    </form>
+
     {% else %}
     <span class="text-muted">Нет доступных действий.</span>
     {% endif %}
   </div>
+</div>
+
+
 </div>
 
 <div class="mt-3">

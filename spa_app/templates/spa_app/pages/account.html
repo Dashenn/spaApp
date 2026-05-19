@@ -50,7 +50,8 @@
                     <th>Услуга</th>
                     <th>Специалист</th>
                     <th>Статус</th>
-                    <th class="text-end">Отзыв</th>
+<th>Действия</th>
+<th class="text-end">Отзыв</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -64,7 +65,62 @@
                     </td>
                     <td>{{ appointment.service.name }}</td>
                     <td>{{ appointment.employee.user }}</td>
-                    <td>{{ appointment.get_status_display }}</td>
+                    <td>
+  {% if appointment.status == "created" %}
+  <span class="badge text-bg-warning">
+    Ожидает подтверждения
+  </span>
+
+  {% elif appointment.status == "confirmed" %}
+  <span class="badge text-bg-success">
+    Подтверждена
+  </span>
+
+  {% elif appointment.status == "completed" %}
+  <span class="badge text-bg-primary">
+    Завершена
+  </span>
+
+  {% elif appointment.status == "failed" %}
+  <span class="badge text-bg-danger">
+    Неуспешно
+  </span>
+
+  {% elif appointment.status == "cancelled" %}
+  <span class="badge text-bg-secondary">
+    Отменена
+  </span>
+  {% endif %}
+</td>
+<td>
+  <div class="d-flex flex-wrap gap-2">
+
+    {% if appointment.status == "created" %}
+    <form
+      method="post"
+      action="{% url 'client_confirm_appointment' appointment.id %}"
+    >
+      {% csrf_token %}
+      <button class="btn btn-sm btn-success">
+        Подтвердить
+      </button>
+    </form>
+    {% endif %}
+
+    {% if appointment.status == "created" or appointment.status == "confirmed" %}
+    <form
+      method="post"
+      action="{% url 'client_cancel_appointment' appointment.id %}"
+    >
+      {% csrf_token %}
+      <button class="btn btn-sm btn-outline-danger">
+        Отменить
+      </button>
+    </form>
+    {% endif %}
+
+  </div>
+</td>
                     <td class="text-end">
                       {% if appointment.has_review %}
                       <div class="small mb-2">
@@ -90,7 +146,7 @@
                   </tr>
                   {% empty %}
                   <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
+                    <td colspan="6" class="text-center text-muted py-4">
                       У вас пока нет записей.
                     </td>
                   </tr>

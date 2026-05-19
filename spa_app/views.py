@@ -9,12 +9,12 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Avg, Count, DecimalField, Max, Prefetch, Q, Sum, Value
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models.functions import Coalesce
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.encoding import force_str
-from django.utils.http import url_has_allowed_host_and_scheme, urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_decode
 
 from .forms import (
     AppointmentForm,
@@ -31,6 +31,7 @@ from .models import (
     AppointmentStatus,
     ClientProfile,
     EmployeeProfile,
+    PaymentMethod,
     Review,
     ScheduleException,
     Service,
@@ -39,25 +40,43 @@ from .models import (
     UserRole,
 )
 from .services.booking_service import get_availability_details
-from .utils import build_employee_password_setup_url, send_employee_invitation_email
-
+from .utils import (
+    build_client_password_setup_url,
+    send_appointment_email,
+    send_employee_invitation_email,
+)
 
 def _is_admin_user(user):
     return user.is_authenticated and getattr(user, "role", "") == UserRole.ADMIN
 
-
 def _is_employee_user(user):
     return user.is_authenticated and getattr(user, "role", "") == UserRole.EMPLOYEE
 
-
 admin_required = user_passes_test(_is_admin_user, login_url="login")
 employee_required = user_passes_test(_is_employee_user, login_url="login")
-
 
 def _build_user_full_name(user):
     parts = [user.last_name, user.first_name, user.middle_name]
     full_name = " ".join(part.strip() for part in parts if part and part.strip())
     return full_name or user.username
+
+def _send_appointment_email_safely(
+    request,
+    appointment,
+    subject,
+    template_name,
+    warning_message,
+    account_setup_url=None,
+):
+    try:
+        send_appointment_email(
+            appointment,
+            subject,
+            template_name,
+            account_setup_url=account_setup_url,
+        )
+    except Exception:
+        messages.warning(request, warning_message)
 
 
 def _can_review_appointment(appointment):
@@ -66,14 +85,12 @@ def _can_review_appointment(appointment):
         and appointment.status == AppointmentStatus.COMPLETED
     )
 
-
 def _decimal_sum():
     return Coalesce(
         Sum("amount"),
         Value(Decimal("0.00")),
         output_field=DecimalField(max_digits=10, decimal_places=2),
     )
-
 
 def _month_start_bounds(target_date):
     month_start_date = target_date.replace(day=1)
@@ -90,13 +107,11 @@ def _month_start_bounds(target_date):
     )
     return month_start_date, month_start, next_month_start
 
-
 def _shift_month(target_date, delta_months):
     month_index = target_date.year * 12 + (target_date.month - 1) + delta_months
     year = month_index // 12
     month = month_index % 12 + 1
     return date(year, month, 1)
-
 
 def _month_label(target_date):
     month_names = [
@@ -115,7 +130,6 @@ def _month_label(target_date):
     ]
     return f"{month_names[target_date.month - 1]} {target_date.year}"
 
-
 def _weekday_label(weekday_index):
     labels = [
         "Понедельник",
@@ -127,7 +141,6 @@ def _weekday_label(weekday_index):
         "Воскресенье",
     ]
     return labels[weekday_index]
-
 
 def _add_validation_error_to_form(form, error):
     if hasattr(error, "message_dict"):
@@ -142,7 +155,6 @@ def _add_validation_error_to_form(form, error):
 
     for message in error.messages:
         form.add_error(None, message)
-
 
 def _build_employee_form_initial(employee):
     return {
@@ -161,8 +173,6 @@ def _build_employee_form_initial(employee):
         "work_end_time": employee.work_end_time,
         "is_active": employee.is_active,
     }
-
-
 
 def _build_booking_employee_catalog():
     employees = (
@@ -200,8 +210,6 @@ def _build_booking_employee_catalog():
 
     return catalog
 
-
-
 def _build_exception_status(exception):
     now = timezone.now()
     if exception.end_datetime < now:
@@ -209,7 +217,6 @@ def _build_exception_status(exception):
     if exception.start_datetime <= now <= exception.end_datetime:
         return "Идет сейчас", "danger"
     return "Запланировано", "warning"
-
 
 def _save_employee_from_form(form, employee=None):
     username = form.cleaned_data["username"]
@@ -264,7 +271,6 @@ def _save_employee_from_form(form, employee=None):
 
     return employee
 
-
 def _save_exception_from_form(form, exception=None):
     try:
         with transaction.atomic():
@@ -283,7 +289,6 @@ def _save_exception_from_form(form, exception=None):
         return None
 
     return exception
-
 
 def _create_booking_from_form(request, form):
     service = form.cleaned_data["service"]
@@ -309,41 +314,45 @@ def _create_booking_from_form(request, form):
         )
         return False
 
+    new_client_needs_password = False
+
     with transaction.atomic():
         if form.uses_authenticated_account:
             user = request.user
             client_profile, _ = ClientProfile.objects.get_or_create(user=user)
         else:
             phone = form.cleaned_data["phone_number"]
-            existing_user = User.objects.filter(phone_number=phone).first()
+            email = form.cleaned_data["email"]
 
-            if existing_user:
-                if existing_user.role != UserRole.CLIENT:
-                    form.add_error(
-                        "phone_number",
-                        "Этот номер телефона уже используется сотрудником системы.",
-                    )
-                    return False
-
-                user = existing_user
-                user.first_name = form.cleaned_data["first_name"]
-                user.last_name = form.cleaned_data["last_name"]
-                user.middle_name = form.cleaned_data["middle_name"]
-                user.email = form.cleaned_data["email"]
-                user.save()
-            else:
-                user = User.objects.create_user(
-                    username=phone,
-                    password=None,
-                    first_name=form.cleaned_data["first_name"],
-                    last_name=form.cleaned_data["last_name"],
-                    middle_name=form.cleaned_data["middle_name"],
-                    email=form.cleaned_data["email"],
-                    phone_number=phone,
-                    role=UserRole.CLIENT,
+            if User.objects.filter(phone_number=phone).exists():
+                form.add_error(
+                    "phone_number",
+                    "Пользователь с таким телефоном уже существует. "
+                    "Войдите в личный кабинет, чтобы создать запись.",
                 )
+                return False
 
-            client_profile, _ = ClientProfile.objects.get_or_create(user=user)
+            if User.objects.filter(email__iexact=email).exists():
+                form.add_error(
+                    "email",
+                    "Пользователь с такой почтой уже существует. "
+                    "Войдите в личный кабинет, чтобы создать запись.",
+                )
+                return False
+
+            user = User.objects.create_user(
+                username=phone,
+                password=None,
+                first_name=form.cleaned_data["first_name"],
+                last_name=form.cleaned_data["last_name"],
+                middle_name=form.cleaned_data["middle_name"],
+                email=email,
+                phone_number=phone,
+                role=UserRole.CLIENT,
+            )
+
+            new_client_needs_password = True
+            client_profile = ClientProfile.objects.create(user=user)
 
         appointment = Appointment(
             client=client_profile,
@@ -356,9 +365,25 @@ def _create_booking_from_form(request, form):
         appointment.full_clean()
         appointment.save()
 
+    account_setup_url = None
+
+    if new_client_needs_password:
+        account_setup_url = build_client_password_setup_url(
+            request,
+            appointment.client.user,
+        )
+
+    _send_appointment_email_safely(
+        request,
+        appointment,
+        "Вы записались в Lotus Bloom",
+        "spa_app/email/appointment_created.html",
+        "Письмо не доставлено.",
+        account_setup_url=account_setup_url,
+    )
+
     messages.success(request, "Запись успешно создана.")
     return True
-
 
 def _build_booking_form(request):
     if request.method == "POST" and request.POST.get("form_type") == "booking":
@@ -376,7 +401,6 @@ def _build_booking_form(request):
 
     return AppointmentForm(user=request.user), None
 
-
 def _render_public_page(request, template_name, context):
     booking_form, redirect_response = _build_booking_form(request)
     if redirect_response is not None:
@@ -391,7 +415,6 @@ def _render_public_page(request, template_name, context):
         }
     )
     return render(request, template_name, context)
-
 
 def index(request):
     categories = ServiceCategory.objects.filter(is_active=True)
@@ -415,7 +438,6 @@ def index(request):
         },
     )
 
-
 def about(request):
     specialists = EmployeeProfile.objects.filter(is_active=True)
 
@@ -427,7 +449,6 @@ def about(request):
             "active_page": "about",
         },
     )
-
 
 def services(request):
     categories = ServiceCategory.objects.prefetch_related(
@@ -446,14 +467,12 @@ def services(request):
         },
     )
 
-
 def contact(request):
     return render(
         request,
         "spa_app/pages/contact.html",
         {"active_page": "contact"},
     )
-
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -518,7 +537,6 @@ def login_view(request):
         },
     )
 
-
 def register_view(request):
     if request.user.is_authenticated:
         return redirect("index")
@@ -555,13 +573,11 @@ def register_view(request):
         },
     )
 
-
 def logout_view(request):
     if request.user.is_authenticated:
         logout(request)
         messages.success(request, "Вы вышли из аккаунта.")
     return redirect("index")
-
 
 def employee_set_password(request, uidb64, token):
     try:
@@ -612,6 +628,56 @@ def employee_set_password(request, uidb64, token):
     )
 
 
+def client_set_password(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        client_user = User.objects.get(pk=uid, role=UserRole.CLIENT)
+    except (TypeError, ValueError, OverflowError, ValidationError, User.DoesNotExist):
+        client_user = None
+
+    is_valid_link = client_user is not None and default_token_generator.check_token(
+        client_user, token
+    )
+
+    if not is_valid_link:
+        return render(
+            request,
+            "spa_app/pages/client_set_password.html",
+            {
+                "active_page": "",
+                "is_valid_link": False,
+            },
+        )
+
+    if request.method == "POST":
+        form = SetPasswordForm(client_user, request.POST)
+
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                "Пароль создан. Теперь вы можете войти в личный кабинет.",
+            )
+            return redirect("login")
+
+        messages.error(
+            request,
+            "Не удалось сохранить пароль. Проверьте требования к паролю.",
+        )
+    else:
+        form = SetPasswordForm(client_user)
+
+    return render(
+        request,
+        "spa_app/pages/client_set_password.html",
+        {
+            "active_page": "",
+            "client_user": client_user,
+            "form": form,
+            "is_valid_link": True,
+        },
+    )
+
 @login_required
 def account_view(request):
     client_profile, _ = ClientProfile.objects.get_or_create(user=request.user)
@@ -642,7 +708,6 @@ def account_view(request):
         },
     )
 
-
 @login_required
 def appointment_review(request, appointment_id):
     client_profile, _ = ClientProfile.objects.get_or_create(user=request.user)
@@ -668,10 +733,10 @@ def appointment_review(request, appointment_id):
             saved_review.appointment = appointment
             saved_review.client = client_profile
             saved_review.service = appointment.service
-            saved_review.is_published = True
+            saved_review.is_published = False
             saved_review.save()
 
-            messages.success(request, "Отзыв сохранен. Спасибо!")
+            messages.success(request, "Отзыв отправлен на модерацию.")
             return redirect("account")
         messages.error(request, "Не удалось сохранить отзыв. Проверьте форму.")
     else:
@@ -688,6 +753,62 @@ def appointment_review(request, appointment_id):
         },
     )
 
+@login_required
+def client_confirm_appointment(request, pk):
+    client_profile = get_object_or_404(ClientProfile, user=request.user)
+
+    appointment = get_object_or_404(
+        Appointment,
+        pk=pk,
+        client=client_profile,
+    )
+
+    if request.method == "POST":
+        if appointment.status == AppointmentStatus.CREATED:
+            appointment.status = AppointmentStatus.CONFIRMED
+            appointment.save(update_fields=["status"])
+
+            _send_appointment_email_safely(
+                request,
+                appointment,
+                "Запись подтверждена",
+                "spa_app/email/appointment_confirmed.html",
+                "Письмо не доставлено.",
+            )
+
+            messages.success(request, "Запись подтверждена.")
+
+    return redirect("account")
+
+@login_required
+def client_cancel_appointment(request, pk):
+    client_profile = get_object_or_404(ClientProfile, user=request.user)
+
+    appointment = get_object_or_404(
+        Appointment,
+        pk=pk,
+        client=client_profile,
+    )
+
+    if request.method == "POST":
+        if appointment.status in [
+            AppointmentStatus.CREATED,
+            AppointmentStatus.CONFIRMED,
+        ]:
+            appointment.status = AppointmentStatus.CANCELLED
+            appointment.save(update_fields=["status"])
+
+            _send_appointment_email_safely(
+                request,
+                appointment,
+                "Запись отменена",
+                "spa_app/email/appointment_cancelled.html",
+                "Письмо не доставлено.",
+            )
+
+            messages.success(request, "Запись отменена.")
+
+    return redirect("account")
 
 @employee_required
 def employee_portal(request):
@@ -745,7 +866,6 @@ def employee_portal(request):
         },
     )
 
-
 def get_service_employees(request):
     service_id = request.GET.get("service")
 
@@ -774,7 +894,6 @@ def get_service_employees(request):
         return JsonResponse({"employees": data})
     except Service.DoesNotExist:
         return JsonResponse({"employees": []})
-
 
 def get_available_times(request):
     service_id = request.GET.get("service")
@@ -815,7 +934,6 @@ def get_available_times(request):
     except (Service.DoesNotExist, EmployeeProfile.DoesNotExist, ValueError):
         return JsonResponse({"times": []}, status=400)
 
-
 @admin_required
 def dashboard_home(request):
     today = timezone.localdate()
@@ -835,7 +953,6 @@ def dashboard_home(request):
     }
 
     return render(request, "spa_app/dashboard/home.html", context)
-
 
 @admin_required
 def dashboard_appointments(request):
@@ -876,15 +993,64 @@ def dashboard_appointments(request):
     )
 
 @admin_required
-def toggle_appointment_payment(request, pk):
+def confirm_appointment(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk)
+
+    if request.method == "POST" and appointment.status == AppointmentStatus.CREATED:
+        appointment.status = AppointmentStatus.CONFIRMED
+        appointment.save(update_fields=["status"])
+
+        _send_appointment_email_safely(
+            request,
+            appointment,
+            "Запись подтверждена",
+            "spa_app/email/appointment_confirmed.html",
+            "Письмо не доставлено.",
+        )
+
+        messages.success(request, "Запись подтверждена.")
+
+    return redirect(request.META.get("HTTP_REFERER", "dashboard_appointments"))
+
+@admin_required
+def accept_appointment_payment(request, pk):
     appointment = get_object_or_404(Appointment, pk=pk)
 
     if request.method == "POST":
-        appointment.is_paid = not appointment.is_paid
-        appointment.paid_at = timezone.now() if appointment.is_paid else None
-        appointment.save(update_fields=["is_paid", "paid_at"])
+        payment_method = request.POST.get("payment_method")
 
-        messages.success(request, "Статус оплаты обновлен.")
+        if payment_method not in [PaymentMethod.CASH, PaymentMethod.CARD]:
+            messages.error(request, "Выберите способ оплаты.")
+            return redirect(request.META.get("HTTP_REFERER", "dashboard_appointments"))
+
+        appointment.is_paid = True
+        appointment.is_refunded = False
+        appointment.refunded_at = None
+        appointment.payment_method = payment_method
+        appointment.paid_at = timezone.now()
+        appointment.save(
+            update_fields=[
+                "is_paid",
+                "is_refunded",
+                "refunded_at",
+                "payment_method",
+                "paid_at",
+            ]
+        )
+
+        messages.success(request, "Оплата сохранена.")
+
+    return redirect(request.META.get("HTTP_REFERER", "dashboard_appointments"))
+
+@admin_required
+def refund_appointment_payment(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk)
+
+    if request.method == "POST" and appointment.is_paid:
+        appointment.is_refunded = True
+        appointment.refunded_at = timezone.now()
+        appointment.save(update_fields=["is_refunded", "refunded_at"])
+        messages.success(request, "Возврат отмечен.")
 
     return redirect(request.META.get("HTTP_REFERER", "dashboard_appointments"))
 
@@ -907,13 +1073,13 @@ def dashboard_clients(request):
                 filter=Q(appointments__start_datetime__lte=now),
             ),
             paid_total=Coalesce(
-    Sum(
-        "appointments__service__price",
-        filter=Q(appointments__is_paid=True),
-    ),
-    Value(Decimal("0.00")),
-    output_field=DecimalField(max_digits=10, decimal_places=2),
-),
+                Sum(
+                    "appointments__service__price",
+                    filter=Q(appointments__is_paid=True),
+                ),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            ),
         )
         .filter(Q(user__role=UserRole.CLIENT) | Q(appointments_count__gt=0))
     )
@@ -949,7 +1115,6 @@ def dashboard_clients(request):
         },
     )
 
-
 @admin_required
 def dashboard_client_detail(request, pk):
     client = get_object_or_404(ClientProfile.objects.select_related("user"), pk=pk)
@@ -969,7 +1134,6 @@ def dashboard_client_detail(request, pk):
         AppointmentStatus.CONFIRMED: "primary",
         AppointmentStatus.COMPLETED: "success",
         AppointmentStatus.CANCELLED: "danger",
-        AppointmentStatus.NO_SHOW: "warning",
     }
 
     for appointment in appointments:
@@ -1016,35 +1180,52 @@ def dashboard_client_detail(request, pk):
 
     return render(request, "spa_app/dashboard/client_detail.html", context)
 
-
 @admin_required
 def change_appointment_status(request, pk, new_status):
     appointment = get_object_or_404(Appointment, pk=pk)
 
-    current = appointment.status
-    allowed_transitions = {
-        AppointmentStatus.CREATED: [
-            AppointmentStatus.CONFIRMED,
-            AppointmentStatus.CANCELLED,
-        ],
-        AppointmentStatus.CONFIRMED: [
-            AppointmentStatus.COMPLETED,
-            AppointmentStatus.CANCELLED,
-        ],
-    }
+    allowed_statuses = [
+        AppointmentStatus.CANCELLED,
+        AppointmentStatus.COMPLETED,
+        AppointmentStatus.FAILED,
+    ]
 
-    if (
-        current not in allowed_transitions
-        or new_status not in allowed_transitions[current]
-    ):
-        return HttpResponseForbidden("Недопустимый переход статуса.")
+    if request.method != "POST":
+        return redirect(request.META.get("HTTP_REFERER", "dashboard_appointments"))
+
+    if new_status not in allowed_statuses:
+        return HttpResponseForbidden("Недопустимый статус.")
+
+    if new_status in [AppointmentStatus.COMPLETED, AppointmentStatus.FAILED]:
+        if not appointment.is_paid:
+            messages.error(request, "Сначала нужно принять оплату.")
+            return redirect(request.META.get("HTTP_REFERER", "dashboard_appointments"))
 
     appointment.status = new_status
-    appointment.save()
+    appointment.save(update_fields=["status"])
 
-    messages.success(request, "Статус обновлен.")
-    return redirect("dashboard_appointments")
+    if new_status == AppointmentStatus.COMPLETED:
+        _send_appointment_email_safely(
+            request,
+            appointment,
+            "Спасибо за визит в Lotus Bloom",
+            "spa_app/email/appointment_completed.html",
+            "Письмо не доставлено.",
+        )
+        messages.success(request, "Запись завершена.")
+    elif new_status == AppointmentStatus.FAILED:
+        messages.warning(request, "Запись отмечена как завершенная неуспешно.")
+    else:
+        _send_appointment_email_safely(
+            request,
+            appointment,
+            "Запись отменена",
+            "spa_app/email/appointment_cancelled.html",
+            "Письмо не доставлено.",
+        )
+        messages.success(request, "Запись отменена.")
 
+    return redirect(request.META.get("HTTP_REFERER", "dashboard_appointments"))
 
 @admin_required
 def appointment_detail(request, pk):
@@ -1066,7 +1247,6 @@ def appointment_detail(request, pk):
         },
     )
 
-
 @admin_required
 def dashboard_services(request):
     services = (
@@ -1083,7 +1263,6 @@ def dashboard_services(request):
             "active_page": "dashboard_services",
         },
     )
-
 
 @admin_required
 def dashboard_service_categories(request):
@@ -1109,7 +1288,6 @@ def dashboard_service_categories(request):
         },
     )
 
-
 @admin_required
 def service_category_create(request):
     if request.method == "POST":
@@ -1132,7 +1310,6 @@ def service_category_create(request):
             "active_page": "dashboard_service_categories",
         },
     )
-
 
 @admin_required
 def service_category_update(request, pk):
@@ -1160,7 +1337,6 @@ def service_category_update(request, pk):
         },
     )
 
-
 @admin_required
 def service_category_toggle_active(request, pk):
     category = get_object_or_404(ServiceCategory, pk=pk)
@@ -1171,7 +1347,6 @@ def service_category_toggle_active(request, pk):
         messages.success(request, "Статус категории обновлен.")
 
     return redirect("dashboard_service_categories")
-
 
 @admin_required
 def service_create(request):
@@ -1209,7 +1384,6 @@ def service_create(request):
         },
     )
 
-
 @admin_required
 def service_update(request, pk):
     service = get_object_or_404(Service, pk=pk)
@@ -1245,7 +1419,6 @@ def service_update(request, pk):
         },
     )
 
-
 @admin_required
 def dashboard_employees(request):
     employees = list(
@@ -1271,7 +1444,6 @@ def dashboard_employees(request):
             "active_page": "dashboard_employees",
         },
     )
-
 
 @admin_required
 def employee_create(request):
@@ -1310,7 +1482,6 @@ def employee_create(request):
         },
     )
 
-
 @admin_required
 def employee_send_invitation(request, pk):
     if request.method != "POST":
@@ -1325,7 +1496,6 @@ def employee_send_invitation(request, pk):
         messages.warning(request, "Письмо не отправилось.")
 
     return redirect("dashboard_employees")
-
 
 @admin_required
 def employee_update(request, pk):
@@ -1367,7 +1537,6 @@ def employee_update(request, pk):
         },
     )
 
-
 @admin_required
 def dashboard_exceptions(request):
     exceptions = list(
@@ -1393,7 +1562,6 @@ def dashboard_exceptions(request):
             "active_page": "dashboard_exceptions",
         },
     )
-
 
 @admin_required
 def exception_create(request):
@@ -1421,7 +1589,6 @@ def exception_create(request):
             "active_page": "dashboard_exceptions",
         },
     )
-
 
 @admin_required
 def exception_update(request, pk):
@@ -1456,6 +1623,66 @@ def exception_update(request, pk):
         },
     )
 
+@admin_required
+def dashboard_reviews(request):
+    reviews = (
+        Review.objects.select_related(
+            "client__user",
+            "service",
+            "appointment",
+        )
+        .order_by("-created_at")
+    )
+
+    return render(
+        request,
+        "spa_app/dashboard/reviews.html",
+        {
+            "reviews": reviews,
+            "active_page": "dashboard_reviews",
+        },
+    )
+
+
+@admin_required
+def review_publish(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+
+    if request.method == "POST":
+        review.is_published = True
+        review.is_rejected = False
+        review.save(update_fields=["is_published", "is_rejected"])
+        messages.success(request, "Отзыв опубликован.")
+
+    return redirect("dashboard_reviews")
+
+
+@admin_required
+def review_reject(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+
+    if request.method == "POST":
+        review.is_published = False
+        review.is_rejected = True
+        review.save(update_fields=["is_published", "is_rejected"])
+        messages.success(request, "Отзыв отклонен.")
+
+    return redirect("dashboard_reviews")
+
+
+@admin_required
+def review_return_to_moderation(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+
+    if request.method == "POST":
+        review.is_published = False
+        review.is_rejected = False
+        review.save(update_fields=["is_published", "is_rejected"])
+        messages.success(request, "Отзыв возвращен на модерацию.")
+
+    return redirect("dashboard_reviews")
+
+
 
 
 @admin_required
@@ -1465,15 +1692,33 @@ def dashboard_analytics(request):
 
     month_start_date, month_start, next_month_start = _month_start_bounds(today)
 
-    month_appointments = Appointment.objects.select_related("service").filter(
+    month_appointments = Appointment.objects.select_related(
+        "service",
+        "employee__user",
+    ).filter(
         start_datetime__gte=month_start,
         start_datetime__lt=next_month_start,
     )
 
+    paid_month_appointments = month_appointments.filter(
+        is_paid=True,
+        is_refunded=False,
+    )
+
+    refunded_month_appointments = month_appointments.filter(
+        is_refunded=True,
+    )
+
     month_appointments_count = month_appointments.count()
+
     completed_this_month = month_appointments.filter(
         status=AppointmentStatus.COMPLETED
     ).count()
+
+    failed_this_month = month_appointments.filter(
+        status=AppointmentStatus.FAILED
+    ).count()
+
     cancelled_this_month = month_appointments.filter(
         status=AppointmentStatus.CANCELLED
     ).count()
@@ -1483,14 +1728,21 @@ def dashboard_analytics(request):
         if month_appointments_count
         else 0
     )
+
+    failed_rate = (
+        round(failed_this_month / month_appointments_count * 100, 1)
+        if month_appointments_count
+        else 0
+    )
+
     cancellation_rate = (
         round(cancelled_this_month / month_appointments_count * 100, 1)
         if month_appointments_count
         else 0
     )
 
-    paid_this_month = (
-        month_appointments.filter(is_paid=True).aggregate(
+    revenue_this_month = (
+        paid_month_appointments.aggregate(
             total=Coalesce(
                 Sum("service__price"),
                 Value(Decimal("0.00")),
@@ -1500,8 +1752,8 @@ def dashboard_analytics(request):
         or Decimal("0.00")
     )
 
-    pending_payments_total = (
-        month_appointments.filter(is_paid=False).aggregate(
+    refunded_this_month = (
+        refunded_month_appointments.aggregate(
             total=Coalesce(
                 Sum("service__price"),
                 Value(Decimal("0.00")),
@@ -1512,11 +1764,39 @@ def dashboard_analytics(request):
     )
 
     average_ticket = (
-        month_appointments.filter(is_paid=True).aggregate(avg=Avg("service__price"))[
-            "avg"
-        ]
+        paid_month_appointments.aggregate(avg=Avg("service__price"))["avg"]
         or Decimal("0.00")
     )
+
+    cash_total = (
+        paid_month_appointments.filter(payment_method=PaymentMethod.CASH).aggregate(
+            total=Coalesce(
+                Sum("service__price"),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            )
+        )["total"]
+        or Decimal("0.00")
+    )
+
+    card_total = (
+        paid_month_appointments.filter(payment_method=PaymentMethod.CARD).aggregate(
+            total=Coalesce(
+                Sum("service__price"),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            )
+        )["total"]
+        or Decimal("0.00")
+    )
+
+    cash_count = paid_month_appointments.filter(
+        payment_method=PaymentMethod.CASH
+    ).count()
+
+    card_count = paid_month_appointments.filter(
+        payment_method=PaymentMethod.CARD
+    ).count()
 
     upcoming_week_appointments = Appointment.objects.filter(
         start_datetime__gte=now,
@@ -1543,21 +1823,81 @@ def dashboard_analytics(request):
         avg=Avg("rating")
     )["avg"]
 
+    moderation_reviews_count = Review.objects.filter(
+        is_published=False,
+        is_rejected=False,
+    ).count()
+
     top_services = list(
-        Service.objects.annotate(appointments_count=Count("appointments"))
-        .filter(appointments_count__gt=0)
-        .order_by("-appointments_count")[:6]
+        Service.objects.annotate(
+            completed_count=Count(
+                "appointments",
+                filter=Q(appointments__status=AppointmentStatus.COMPLETED),
+            )
+        )
+        .filter(completed_count__gt=0)
+        .order_by("-completed_count")[:6]
     )
 
     employee_stats = list(
         EmployeeProfile.objects.select_related("user")
-        .annotate(total_appointments=Count("appointments"))
+        .annotate(
+            total_appointments=Count(
+                "appointments",
+                filter=Q(
+                    appointments__start_datetime__gte=month_start,
+                    appointments__start_datetime__lt=next_month_start,
+                ),
+            ),
+            completed_appointments=Count(
+                "appointments",
+                filter=Q(
+                    appointments__start_datetime__gte=month_start,
+                    appointments__start_datetime__lt=next_month_start,
+                    appointments__status=AppointmentStatus.COMPLETED,
+                ),
+            ),
+            failed_appointments=Count(
+                "appointments",
+                filter=Q(
+                    appointments__start_datetime__gte=month_start,
+                    appointments__start_datetime__lt=next_month_start,
+                    appointments__status=AppointmentStatus.FAILED,
+                ),
+            ),
+            refunded_appointments=Count(
+                "appointments",
+                filter=Q(
+                    appointments__start_datetime__gte=month_start,
+                    appointments__start_datetime__lt=next_month_start,
+                    appointments__is_refunded=True,
+                ),
+            ),
+            revenue=Coalesce(
+                Sum(
+                    "appointments__service__price",
+                    filter=Q(
+                        appointments__start_datetime__gte=month_start,
+                        appointments__start_datetime__lt=next_month_start,
+                        appointments__is_paid=True,
+                        appointments__is_refunded=False,
+                    ),
+                ),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            ),
+        )
         .filter(total_appointments__gt=0)
-        .order_by("-total_appointments")[:8]
+        .order_by("-revenue", "-total_appointments")[:10]
     )
 
     for employee in employee_stats:
         employee.full_name = _build_user_full_name(employee.user)
+        employee.load_rate = (
+            round(employee.completed_appointments / employee.total_appointments * 100, 1)
+            if employee.total_appointments
+            else 0
+        )
 
     monthly_trend = []
 
@@ -1573,6 +1913,7 @@ def dashboard_analytics(request):
 
         appointments = Appointment.objects.filter(
             is_paid=True,
+            is_refunded=False,
             paid_at__gte=trend_start,
             paid_at__lt=trend_end,
         )
@@ -1591,25 +1932,23 @@ def dashboard_analytics(request):
             }
         )
 
-    paid_count = Appointment.objects.filter(is_paid=True).count()
-    pending_count = Appointment.objects.filter(is_paid=False).count()
-
     chart_data = {
         "months": {
             "labels": [row["label"] for row in monthly_trend],
             "revenue": [float(row["total"] or 0) for row in monthly_trend],
         },
         "payments": {
-            "labels": ["Оплачено", "Не оплачено"],
-            "values": [paid_count, pending_count],
+            "labels": ["Наличные", "Карта"],
+            "values": [cash_count, card_count],
         },
         "services": {
             "labels": [service.name for service in top_services],
-            "values": [service.appointments_count for service in top_services],
+            "values": [service.completed_count for service in top_services],
         },
         "employees": {
             "labels": [employee.full_name for employee in employee_stats],
-            "values": [employee.total_appointments for employee in employee_stats],
+            "revenue": [float(employee.revenue or 0) for employee in employee_stats],
+            "appointments": [employee.total_appointments for employee in employee_stats],
         },
     }
 
@@ -1618,18 +1957,25 @@ def dashboard_analytics(request):
         "spa_app/dashboard/analytics.html",
         {
             "month_label": _month_label(month_start_date),
-            "paid_this_month": paid_this_month,
-            "pending_payments_total": pending_payments_total,
+            "revenue_this_month": revenue_this_month,
+            "refunded_this_month": refunded_this_month,
             "average_ticket": average_ticket,
+            "cash_total": cash_total,
+            "card_total": card_total,
+            "cash_count": cash_count,
+            "card_count": card_count,
             "month_appointments_count": month_appointments_count,
             "completed_this_month": completed_this_month,
+            "failed_this_month": failed_this_month,
             "cancelled_this_month": cancelled_this_month,
             "completion_rate": completion_rate,
+            "failed_rate": failed_rate,
             "cancellation_rate": cancellation_rate,
             "upcoming_week_appointments": upcoming_week_appointments,
             "active_clients_this_month": active_clients_this_month,
             "repeat_clients_count": repeat_clients_count,
             "average_rating": average_rating,
+            "moderation_reviews_count": moderation_reviews_count,
             "monthly_trend": monthly_trend,
             "chart_data": chart_data,
             "employee_stats": employee_stats,

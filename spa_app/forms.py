@@ -14,12 +14,18 @@ from .models import (
 )
 
 
+def set_form_control(fields):
+    for field in fields:
+        field.widget.attrs.update({"class": "form-control"})
+
+
 class AppointmentForm(forms.Form):
     last_name = forms.CharField(label="Фамилия", max_length=150)
     first_name = forms.CharField(label="Имя", max_length=150)
     middle_name = forms.CharField(label="Отчество", max_length=150, required=False)
     phone_number = forms.CharField(label="Телефон", max_length=20)
     email = forms.EmailField(label="Электронная почта")
+
     service = forms.ModelChoiceField(
         label="Услуга",
         queryset=Service.objects.filter(is_active=True, category__is_active=True),
@@ -44,107 +50,132 @@ class AppointmentForm(forms.Form):
         self.uses_authenticated_account = bool(
             user
             and user.is_authenticated
-            and getattr(user, "role", "") in [UserRole.CLIENT, UserRole.EMPLOYEE]
+            and user.role in [UserRole.CLIENT, UserRole.EMPLOYEE]
         )
-        self.is_authenticated_client = self.uses_authenticated_account
 
         if args and self.uses_authenticated_account:
-            mutable_data = args[0].copy()
-            mutable_data["last_name"] = user.last_name
-            mutable_data["first_name"] = user.first_name
-            mutable_data["middle_name"] = user.middle_name
-            mutable_data["phone_number"] = user.phone_number
-            mutable_data["email"] = user.email
-            args = (mutable_data,) + args[1:]
-
-        super().__init__(*args, **kwargs)
-
-        for field in self.fields.values():
-            field.widget.attrs.update({"class": "form-control"})
-
-        self.fields["time"].widget.choices = [
-            ("", "Сначала выберите услугу, специалиста и дату")
-        ]
-
-        selected_service = None
-        service_value = self.data.get("service") or self.initial.get("service")
-        if service_value:
-            try:
-                selected_service = Service.objects.get(
-                    pk=service_value,
-                    is_active=True,
-                    category__is_active=True,
-                )
-            except (Service.DoesNotExist, TypeError, ValueError):
-                selected_service = None
-
-        if selected_service is not None:
-            self.fields["employee"].queryset = (
-                selected_service.employees.select_related("user")
-                .filter(is_active=True)
-                .order_by("user__last_name", "user__first_name", "user__middle_name")
-            )
-
-        selected_employee = None
-        employee_value = self.data.get("employee") or self.initial.get("employee")
-        if employee_value and selected_service is not None:
-            try:
-                selected_employee = self.fields["employee"].queryset.get(pk=employee_value)
-            except (EmployeeProfile.DoesNotExist, TypeError, ValueError):
-                selected_employee = None
-
-        selected_date = self.data.get("date") or self.initial.get("date")
-        if selected_service is not None and selected_employee is not None and selected_date:
-            try:
-                if isinstance(selected_date, str):
-                    selected_date = forms.DateField().clean(selected_date)
-
-                from .services.booking_service import get_availability_details
-
-                availability = get_availability_details(
-                    selected_employee,
-                    selected_service,
-                    selected_date,
-                )
-                time_choices = [
-                    (slot.strftime("%H:%M"), slot.strftime("%H:%M"))
-                    for slot in availability.slots
-                ]
-                if time_choices:
-                    self.fields["time"].widget.choices = time_choices
-                else:
-                    self.fields["time"].widget.choices = [
-                        ("", "Нет свободных слотов для записи")
-                    ]
-            except forms.ValidationError:
-                pass
-
-        if self.uses_authenticated_account:
-            self.fields["last_name"].initial = user.last_name
-            self.fields["first_name"].initial = user.first_name
-            self.fields["middle_name"].initial = user.middle_name
-            self.fields["phone_number"].initial = user.phone_number
-            self.fields["email"].initial = user.email
-
-            for field_name in [
+            data = args[0].copy()
+            for field in [
                 "last_name",
                 "first_name",
                 "middle_name",
                 "phone_number",
                 "email",
             ]:
-                self.fields[field_name].required = False
-                self.fields[field_name].widget = forms.HiddenInput()
+                data[field] = getattr(user, field)
+            args = (data,) + args[1:]
+
+        super().__init__(*args, **kwargs)
+        set_form_control(self.fields.values())
+
+        self.fields["time"].widget.choices = [
+            ("", "Сначала выберите услугу, специалиста и дату")
+        ]
+
+        service = self._get_service()
+        if service:
+            self.fields["employee"].queryset = (
+                service.employees.select_related("user")
+                .filter(is_active=True)
+                .order_by("user__last_name", "user__first_name")
+            )
+
+        employee = self._get_employee(service)
+        selected_date = self.data.get("date") or self.initial.get("date")
+
+        if service and employee and selected_date:
+            self._set_time_choices(service, employee, selected_date)
+
+        if self.uses_authenticated_account:
+            for field in [
+                "last_name",
+                "first_name",
+                "middle_name",
+                "phone_number",
+                "email",
+            ]:
+                self.fields[field].required = False
+                self.fields[field].widget = forms.HiddenInput()
+
+    def _get_service(self):
+        service_id = self.data.get("service") or self.initial.get("service")
+        if not service_id:
+            return None
+
+        try:
+            return Service.objects.get(
+                pk=service_id,
+                is_active=True,
+                category__is_active=True,
+            )
+        except (Service.DoesNotExist, TypeError, ValueError):
+            return None
+
+    def _get_employee(self, service):
+        employee_id = self.data.get("employee") or self.initial.get("employee")
+        if not service or not employee_id:
+            return None
+
+        try:
+            return self.fields["employee"].queryset.get(pk=employee_id)
+        except (EmployeeProfile.DoesNotExist, TypeError, ValueError):
+            return None
+
+    def _set_time_choices(self, service, employee, selected_date):
+        try:
+            if isinstance(selected_date, str):
+                selected_date = forms.DateField().clean(selected_date)
+
+            from .services.booking_service import get_availability_details
+
+            availability = get_availability_details(employee, service, selected_date)
+            choices = [
+                (slot.strftime("%H:%M"), slot.strftime("%H:%M"))
+                for slot in availability.slots
+            ]
+
+            self.fields["time"].widget.choices = choices or [
+                ("", "Нет свободных слотов для записи")
+            ]
+        except forms.ValidationError:
+            pass
+
+    def clean_phone_number(self):
+        phone = self.cleaned_data["phone_number"].strip()
+
+        if not self.uses_authenticated_account:
+            if User.objects.filter(phone_number=phone).exists():
+                raise forms.ValidationError(
+                    "Пользователь с таким телефоном уже существует. "
+                    "Войдите в личный кабинет, чтобы создать запись."
+                )
+
+        return phone
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+
+        if not self.uses_authenticated_account:
+            if User.objects.filter(email__iexact=email).exists():
+                raise forms.ValidationError(
+                    "Пользователь с такой почтой уже существует. "
+                    "Войдите в личный кабинет, чтобы создать запись."
+                )
+
+        return email
 
     def clean(self):
         cleaned_data = super().clean()
 
         if self.uses_authenticated_account:
-            cleaned_data["last_name"] = self.user.last_name
-            cleaned_data["first_name"] = self.user.first_name
-            cleaned_data["middle_name"] = self.user.middle_name
-            cleaned_data["phone_number"] = self.user.phone_number
-            cleaned_data["email"] = self.user.email
+            for field in [
+                "last_name",
+                "first_name",
+                "middle_name",
+                "phone_number",
+                "email",
+            ]:
+                cleaned_data[field] = getattr(self.user, field)
 
         return cleaned_data
 
@@ -161,10 +192,6 @@ class ServiceForm(forms.ModelForm):
             "employees",
             "is_active",
         ]
-        widgets = {
-            "description": forms.Textarea(attrs={"rows": 4}),
-            "employees": forms.CheckboxSelectMultiple(),
-        }
         labels = {
             "name": "Название",
             "category": "Категория",
@@ -174,38 +201,38 @@ class ServiceForm(forms.ModelForm):
             "employees": "Специалисты",
             "is_active": "Активна",
         }
-        help_texts = {
-            "employees": "Отметьте сотрудников, которые оказывают эту услугу.",
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
+            "employees": forms.CheckboxSelectMultiple(),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        selected_employee_ids = []
+        selected_ids = []
         if self.instance.pk:
-            selected_employee_ids = list(self.instance.employees.values_list("pk", flat=True))
+            selected_ids = list(self.instance.employees.values_list("pk", flat=True))
 
-        employee_queryset = (
+        self.fields["employees"].queryset = (
             EmployeeProfile.objects.select_related("user")
-            .filter(Q(is_active=True) | Q(pk__in=selected_employee_ids))
-            .order_by("user__last_name", "user__first_name", "user__middle_name", "position")
+            .filter(Q(is_active=True) | Q(pk__in=selected_ids))
+            .order_by("user__last_name", "user__first_name")
             .distinct()
         )
-        self.fields["employees"].queryset = employee_queryset
         self.fields["category"].queryset = ServiceCategory.objects.order_by("name")
 
-        self.fields["name"].widget.attrs.update({"class": "form-control"})
+        set_form_control([
+            self.fields["name"],
+            self.fields["description"],
+            self.fields["price"],
+            self.fields["duration_minutes"],
+        ])
+
         self.fields["category"].widget.attrs.update({"class": "form-select"})
-        self.fields["description"].widget.attrs.update({"class": "form-control"})
-        self.fields["price"].widget.attrs.update(
-            {"class": "form-control", "step": "0.01", "min": "0"}
-        )
-        self.fields["duration_minutes"].widget.attrs.update(
-            {"class": "form-control", "min": "5"}
-        )
         self.fields["employees"].widget.attrs.update({"class": "list-unstyled mb-0"})
         self.fields["is_active"].widget.attrs.update({"class": "form-check-input"})
-
+        self.fields["price"].widget.attrs.update({"step": "0.01", "min": "0"})
+        self.fields["duration_minutes"].widget.attrs.update({"min": "5"})
         self.fields["employees"].label_from_instance = (
             lambda employee: f"{employee.user} ({employee.position})"
         )
@@ -215,21 +242,23 @@ class ServiceCategoryForm(forms.ModelForm):
     class Meta:
         model = ServiceCategory
         fields = ["name", "description", "image", "is_active"]
-        widgets = {
-            "description": forms.Textarea(attrs={"rows": 4}),
-        }
         labels = {
             "name": "Название",
             "description": "Описание",
             "image": "Изображение",
             "is_active": "Активна",
         }
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["name"].widget.attrs.update({"class": "form-control"})
-        self.fields["description"].widget.attrs.update({"class": "form-control"})
-        self.fields["image"].widget.attrs.update({"class": "form-control"})
+        set_form_control([
+            self.fields["name"],
+            self.fields["description"],
+            self.fields["image"],
+        ])
         self.fields["is_active"].widget.attrs.update({"class": "form-check-input"})
 
 
@@ -275,54 +304,31 @@ class EmployeeCreateForm(forms.Form):
         self.user_instance = kwargs.pop("user_instance", None)
         super().__init__(*args, **kwargs)
 
-        field_classes = {
-            "username": "form-control",
-            "last_name": "form-control",
-            "first_name": "form-control",
-            "middle_name": "form-control",
-            "phone_number": "form-control",
-            "email": "form-control",
-            "position": "form-control",
-            "description": "form-control",
-            "experience_years": "form-control",
-            "hire_date": "form-control",
-            "work_start_time": "form-control",
-            "work_end_time": "form-control",
-            "photo": "form-control",
-            "is_active": "form-check-input",
-        }
-        for field_name, css_class in field_classes.items():
-            self.fields[field_name].widget.attrs.update({"class": css_class})
-
+        set_form_control([
+            field
+            for name, field in self.fields.items()
+            if name not in ["work_days", "is_active"]
+        ])
         self.fields["work_days"].widget.attrs.update({"class": "list-unstyled mb-0"})
+        self.fields["is_active"].widget.attrs.update({"class": "form-check-input"})
 
     def _user_queryset(self):
-        queryset = User.objects.all()
-        if self.user_instance is not None:
-            queryset = queryset.exclude(pk=self.user_instance.pk)
-        return queryset
+        users = User.objects.all()
+        if self.user_instance:
+            users = users.exclude(pk=self.user_instance.pk)
+        return users
 
     def clean_username(self):
         username = self.cleaned_data["username"].strip()
-        if not username:
-            raise forms.ValidationError("Укажите логин сотрудника.")
-
-        duplicate_user = self._user_queryset().filter(
-            Q(username__iexact=username)
-            | Q(email__iexact=username)
-            | Q(phone_number=username)
-        )
-        if duplicate_user.exists():
-            raise forms.ValidationError(
-                "Такой логин уже занят или совпадает с телефоном/email другого пользователя."
-            )
+        if self._user_queryset().filter(username__iexact=username).exists():
+            raise forms.ValidationError("Такой логин уже занят.")
         return username
 
     def clean_phone_number(self):
-        phone_number = self.cleaned_data["phone_number"].strip()
-        if self._user_queryset().filter(phone_number=phone_number).exists():
+        phone = self.cleaned_data["phone_number"].strip()
+        if self._user_queryset().filter(phone_number=phone).exists():
             raise forms.ValidationError("Пользователь с таким телефоном уже существует.")
-        return phone_number
+        return phone
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
@@ -333,50 +339,32 @@ class EmployeeCreateForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         work_days = cleaned_data.get("work_days") or []
-        work_start_time = cleaned_data.get("work_start_time")
-        work_end_time = cleaned_data.get("work_end_time")
+        start = cleaned_data.get("work_start_time")
+        end = cleaned_data.get("work_end_time")
 
-        if bool(work_start_time) != bool(work_end_time):
-            raise forms.ValidationError(
-                "Для графика нужно указать и начало, и конец рабочего дня."
-            )
+        if bool(start) != bool(end):
+            raise forms.ValidationError("Укажите и начало, и конец рабочего дня.")
 
-        if work_start_time and work_end_time and work_start_time >= work_end_time:
-            self.add_error(
-                "work_end_time",
-                "Время окончания должно быть позже времени начала.",
-            )
+        if start and end and start >= end:
+            self.add_error("work_end_time", "Время окончания должно быть позже начала.")
 
-        if work_days and not (work_start_time and work_end_time):
-            raise forms.ValidationError(
-                "Если выбраны рабочие дни, укажите время работы."
-            )
+        if work_days and not (start and end):
+            raise forms.ValidationError("Если выбраны рабочие дни, укажите время работы.")
 
-        if (work_start_time or work_end_time) and not work_days:
-            raise forms.ValidationError(
-                "Если указано время работы, выберите хотя бы один рабочий день."
-            )
+        if (start or end) and not work_days:
+            raise forms.ValidationError("Если указано время работы, выберите рабочие дни.")
 
-        try:
-            cleaned_data["work_days"] = sorted({int(day) for day in work_days})
-        except (TypeError, ValueError):
-            raise forms.ValidationError("В рабочих днях найдено некорректное значение.")
+        cleaned_data["work_days"] = sorted({int(day) for day in work_days})
         return cleaned_data
 
 
 class ScheduleExceptionForm(forms.ModelForm):
     class Meta:
         model = ScheduleException
-        fields = [
-            "employee",
-            "exception_type",
-            "start_datetime",
-            "end_datetime",
-            "reason",
-        ]
+        fields = ["employee", "exception_type", "start_datetime", "end_datetime", "reason"]
         labels = {
             "employee": "Сотрудник",
-            "exception_type": "Тип исключения",
+            "exception_type": "Тип отсутствия",
             "start_datetime": "Начало",
             "end_datetime": "Окончание",
             "reason": "Комментарий",
@@ -390,54 +378,52 @@ class ScheduleExceptionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        selected_employee_ids = []
+        selected_ids = []
         if self.instance.pk:
-            selected_employee_ids = [self.instance.employee_id]
+            selected_ids = [self.instance.employee_id]
 
-        employee_queryset = (
+        self.fields["employee"].queryset = (
             EmployeeProfile.objects.select_related("user")
-            .filter(Q(is_active=True) | Q(pk__in=selected_employee_ids))
-            .order_by("user__last_name", "user__first_name", "user__middle_name", "position")
+            .filter(Q(is_active=True) | Q(pk__in=selected_ids))
+            .order_by("user__last_name", "user__first_name")
             .distinct()
         )
-        self.fields["employee"].queryset = employee_queryset
         self.fields["employee"].label_from_instance = (
             lambda employee: f"{employee.user} ({employee.position})"
         )
 
         self.fields["employee"].widget.attrs.update({"class": "form-select"})
         self.fields["exception_type"].widget.attrs.update({"class": "form-select"})
-        self.fields["start_datetime"].widget.attrs.update({"class": "form-control"})
-        self.fields["end_datetime"].widget.attrs.update({"class": "form-control"})
-        self.fields["reason"].widget.attrs.update({"class": "form-control"})
+        set_form_control([
+            self.fields["start_datetime"],
+            self.fields["end_datetime"],
+            self.fields["reason"],
+        ])
 
         self.fields["start_datetime"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["end_datetime"].input_formats = ["%Y-%m-%dT%H:%M"]
 
         if self.instance.pk:
-            if self.instance.start_datetime:
-                self.initial["start_datetime"] = timezone.localtime(
-                    self.instance.start_datetime
-                ).strftime("%Y-%m-%dT%H:%M")
-            if self.instance.end_datetime:
-                self.initial["end_datetime"] = timezone.localtime(
-                    self.instance.end_datetime
-                ).strftime("%Y-%m-%dT%H:%M")
+            self.initial["start_datetime"] = timezone.localtime(
+                self.instance.start_datetime
+            ).strftime("%Y-%m-%dT%H:%M")
+            self.initial["end_datetime"] = timezone.localtime(
+                self.instance.end_datetime
+            ).strftime("%Y-%m-%dT%H:%M")
 
     def clean(self):
         cleaned_data = super().clean()
-        start_datetime = cleaned_data.get("start_datetime")
-        end_datetime = cleaned_data.get("end_datetime")
+        start = cleaned_data.get("start_datetime")
+        end = cleaned_data.get("end_datetime")
 
-        if start_datetime and timezone.is_naive(start_datetime):
-            cleaned_data["start_datetime"] = timezone.make_aware(start_datetime)
+        if start and timezone.is_naive(start):
+            cleaned_data["start_datetime"] = timezone.make_aware(start)
 
-        if end_datetime and timezone.is_naive(end_datetime):
-            cleaned_data["end_datetime"] = timezone.make_aware(end_datetime)
+        if end and timezone.is_naive(end):
+            cleaned_data["end_datetime"] = timezone.make_aware(end)
 
-        if cleaned_data.get("start_datetime") and cleaned_data.get("end_datetime"):
-            if cleaned_data["start_datetime"] >= cleaned_data["end_datetime"]:
-                self.add_error("end_datetime", "Окончание должно быть позже начала.")
+        if start and end and start >= end:
+            self.add_error("end_datetime", "Окончание должно быть позже начала.")
 
         return cleaned_data
 
@@ -470,16 +456,12 @@ class ReviewForm(forms.ModelForm):
 
 
 class LoginForm(forms.Form):
-    identifier = forms.CharField(label="Телефон, email или логин", max_length=150)
-    password = forms.CharField(
-        label="Пароль",
-        widget=forms.PasswordInput(),
-    )
+    identifier = forms.CharField(label="Телефон или логин", max_length=150)
+    password = forms.CharField(label="Пароль", widget=forms.PasswordInput())
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs.update({"class": "form-control"})
+        set_form_control(self.fields.values())
 
 
 class RegistrationForm(forms.Form):
@@ -493,14 +475,13 @@ class RegistrationForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs.update({"class": "form-control"})
+        set_form_control(self.fields.values())
 
     def clean_phone_number(self):
-        phone_number = self.cleaned_data["phone_number"].strip()
-        if User.objects.filter(phone_number=phone_number).exists():
+        phone = self.cleaned_data["phone_number"].strip()
+        if User.objects.filter(phone_number=phone).exists():
             raise forms.ValidationError("Пользователь с таким телефоном уже существует.")
-        return phone_number
+        return phone
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()

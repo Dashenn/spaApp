@@ -1,54 +1,20 @@
 .django-messages {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 18px;
+  right: 18px;
   z-index: 1080;
-  width: min(380px, calc(100vw - 40px));
+  width: min(360px, calc(100vw - 36px));
 }
 
 .django-message {
-  --message-color: #df68a7;
-
-  position: relative;
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 14px 44px 14px 14px;
-  color: var(--dark, #242b38);
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid var(--border, rgba(74, 111, 165, 0.16));
-  border-left: 5px solid var(--message-color);
+  margin-bottom: 10px;
+  padding: 14px 42px 14px 16px;
+  color: #242b38;
+  background: #ffffff;
+  border: 1px solid rgba(74, 111, 165, 0.16);
+  border-left: 4px solid #df68a7;
   border-radius: 8px;
-  box-shadow: 0 12px 28px rgba(40, 48, 64, 0.12);
-}
-
-.django-message-icon {
-  display: grid;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  color: #fff;
-  background: var(--message-color);
-  border-radius: 50%;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.django-message .btn-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 0.7rem;
-  height: 0.7rem;
-  padding: 0.25rem;
-  opacity: 0.45;
-}
-
-.django-message-title {
-  margin-bottom: 2px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  box-shadow: 0 10px 24px rgba(40, 48, 64, 0.12);
 }
 
 .django-message-text {
@@ -56,28 +22,40 @@
   line-height: 1.35;
 }
 
-.django-message-success {
-  --message-color: #3d8f67;
+.django-message .btn-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 0.35rem;
+  opacity: 0.45;
 }
 
-.django-message-danger,
-.django-message-error {
-  --message-color: #c94f4f;
+.django-message-success {
+  border-left-color: #3d8f67;
+}
+
+.django-message-error,
+.django-message-danger {
+  border-left-color: #c94f4f;
 }
 
 .django-message-warning {
-  --message-color: #c88a2f;
+  border-left-color: #c88a2f;
 }
 
 .django-message-info {
-  --message-color: #467ca8;
+  border-left-color: #467ca8;
 }
 
 @media (max-width: 576px) {
   .django-messages {
-    top: 12px;
-    right: 12px;
-    left: 12px;
+    top: 10px;
+    right: 10px;
+    left: 10px;
     width: auto;
+  }
+
+  .django-message {
+    padding: 12px 38px 12px 14px;
   }
 }

@@ -1,5 +1,5 @@
 {% extends "spa_app/dashboard/layout.html" %}
-
+{% load static %}
 {% block title %}CRM-панель{% endblock %}
 {% block page_title %}Главная{% endblock %}
 
@@ -7,35 +7,47 @@
 
 <div class="row g-4 mb-4">
   <div class="col-md-4">
-    <div class="card border-0 shadow-sm dashboard-stat">
+    <div class="card dashboard-stat">
       <div class="card-body">
-        <div class="text-muted small">Записей сегодня</div>
-        <h3 class="mb-0">{{ today_appointments_count }}</h3>
+        <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+
+        <div>
+          <div class="text-muted small">Записей сегодня</div>
+          <h3 class="mb-0">{{ today_appointments_count }}</h3>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="col-md-4">
-    <div class="card border-0 shadow-sm dashboard-stat">
+    <div class="card dashboard-stat">
       <div class="card-body">
-        <div class="text-muted small">Активных сотрудников</div>
-        <h3 class="mb-0">{{ active_employees_count }}</h3>
+        <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+
+        <div>
+          <div class="text-muted small">Активных сотрудников</div>
+          <h3 class="mb-0">{{ active_employees_count }}</h3>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="col-md-4">
-    <div class="card border-0 shadow-sm dashboard-stat">
+    <div class="card dashboard-stat">
       <div class="card-body">
-        <div class="text-muted small">Услуг в CRM</div>
-        <h3 class="mb-0">{{ services_count }}</h3>
+        <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+
+        <div>
+          <div class="text-muted small">Услуг в CRM</div>
+          <h3 class="mb-0">{{ services_count }}</h3>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="card border-0 shadow-sm">
-  <div class="card-header bg-white">
+<div class="card">
+  <div class="card-header">
     <h5 class="mb-0">Быстрые действия</h5>
   </div>
 

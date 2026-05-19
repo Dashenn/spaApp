@@ -1,8 +1,8 @@
-<section class="public-form-section public-booking-section py-5" id="booking-form">
+<section class="public-booking-section" id="booking-form">
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-xl-10">
-        <div class="public-form-card card border-0 shadow-sm">
+        <div class="public-form-card">
           <div class="card-body p-4 p-lg-5">
             <div class="text-center mb-4">
               <h2 class="title mb-2">Запишитесь на услугу</h2>
@@ -13,7 +13,7 @@
 
             <form
               method="post"
-              class="public-form booking-form"
+              class="public-form"
               data-booking-form
               data-employees-url="{% url 'get_service_employees' %}"
               data-times-url="{% url 'get_available_times' %}"

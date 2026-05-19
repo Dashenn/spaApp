@@ -80,9 +80,52 @@ urlpatterns = [
     path("dashboard/exceptions/<int:pk>/edit/", views.exception_update, name="exception_update"),
     path("dashboard/analytics/", views.dashboard_analytics, name="dashboard_analytics"),
     path(
-    "dashboard/appointments/<int:pk>/payment-toggle/",
-    views.toggle_appointment_payment,
-    name="toggle_appointment_payment",
+    "dashboard/appointments/<int:pk>/confirm/",
+    views.confirm_appointment,
+    name="confirm_appointment",
+),
+path(
+    "dashboard/appointments/<int:pk>/accept-payment/",
+    views.accept_appointment_payment,
+    name="accept_appointment_payment",
+),
+path(
+    "dashboard/appointments/<int:pk>/refund/",
+    views.refund_appointment_payment,
+    name="refund_appointment_payment",
+),
+
+path(
+    "account/appointments/<int:pk>/confirm/",
+    views.client_confirm_appointment,
+    name="client_confirm_appointment",
+),
+
+path(
+    "account/appointments/<int:pk>/cancel/",
+    views.client_cancel_appointment,
+    name="client_cancel_appointment",
+),
+path("dashboard/reviews/", views.dashboard_reviews, name="dashboard_reviews"),
+path(
+    "dashboard/reviews/<int:pk>/publish/",
+    views.review_publish,
+    name="review_publish",
+),
+path(
+    "dashboard/reviews/<int:pk>/reject/",
+    views.review_reject,
+    name="review_reject",
+),
+path(
+    "dashboard/reviews/<int:pk>/moderation/",
+    views.review_return_to_moderation,
+    name="review_return_to_moderation",
+),
+path(
+    "clients/set-password/<uidb64>/<token>/",
+    views.client_set_password,
+    name="client_set_password",
 ),
    
 ]

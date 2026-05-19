@@ -1,0 +1,86 @@
+{% extends "spa_app/dashboard/layout.html" %}
+
+{% block page_title %}Отзывы{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Клиент</th>
+          <th>Услуга</th>
+          <th>Оценка</th>
+          <th>Отзыв</th>
+          <th>Дата</th>
+          <th>Статус</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for review in reviews %}
+        <tr>
+          <td>{{ review.client.user }}</td>
+          <td>{{ review.service.name }}</td>
+          <td>{{ review.rating }}/5</td>
+          <td style="max-width: 360px;">
+            {{ review.text }}
+          </td>
+          <td>{{ review.created_at|date:"d.m.Y H:i" }}</td>
+          <td>
+  {% if review.is_published %}
+  <span class="dash-status dash-status-paid">Опубликован</span>
+  {% elif review.is_rejected %}
+  <span class="dash-status dash-status-cancelled">Отклонен</span>
+  {% else %}
+  <span class="dash-status dash-status-unpaid">На модерации</span>
+  {% endif %}
+</td>
+          <td class="text-nowrap">
+  <div class="d-flex flex-wrap gap-2">
+
+    {% if not review.is_published %}
+    <form method="post" action="{% url 'review_publish' review.id %}">
+      {% csrf_token %}
+      <button class="btn btn-sm btn-dark">
+        Опубликовать
+      </button>
+    </form>
+    {% endif %}
+
+    {% if not review.is_rejected %}
+    <form method="post" action="{% url 'review_reject' review.id %}">
+      {% csrf_token %}
+      <button class="btn btn-sm btn-outline-danger">
+        Отклонить
+      </button>
+    </form>
+    {% endif %}
+
+    {% if review.is_published or review.is_rejected %}
+    <form method="post" action="{% url 'review_return_to_moderation' review.id %}">
+      {% csrf_token %}
+      <button class="btn btn-sm btn-outline-secondary">
+        На модерацию
+      </button>
+    </form>
+    {% endif %}
+
+  </div>
+</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">
+            Отзывов пока нет.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -16,7 +16,7 @@
 
 <div class="d-flex min-vh-100 dashboard-shell">
 
-  <aside class="dashboard-sidebar flex-shrink-0">
+  <aside class="dashboard-sidebar">
 
     <div class="dashboard-brand-row">
       <a href="{% url 'index' %}">
@@ -40,6 +40,10 @@
       <a class="nav-link {% if active_page == 'dashboard_clients' %}active{% endif %}" href="{% url 'dashboard_clients' %}">
         Клиенты
       </a>
+
+      <a class="nav-link {% if active_page == 'dashboard_reviews' %}active{% endif %}" href="{% url 'dashboard_reviews' %}">
+  Отзывы
+</a>
 
       <a class="nav-link {% if active_page == 'dashboard_services' %}active{% endif %}" href="{% url 'dashboard_services' %}">
         Услуги
@@ -72,13 +76,13 @@
         <small class="text-muted">Управление бизнес-процессами SPA-салона</small>
       </div>
 
-      <div class="dashboard-header-meta d-flex align-items-center justify-content-end gap-3 flex-wrap">
-        <div class="dashboard-user text-end">
+      <div class="dashboard-header-meta">
+        <div class="dashboard-user">
           <div class="fw-semibold">{{ request.user }}</div>
           <small class="text-muted">{{ request.user.get_role_display }}</small>
         </div>
 
-        <div class="dashboard-header-actions d-flex align-items-center gap-2">
+        <div class="dashboard-header-actions">
           <a href="{% url 'index' %}" class="dashboard-top-action dashboard-top-action--ghost">
             На сайт
           </a>

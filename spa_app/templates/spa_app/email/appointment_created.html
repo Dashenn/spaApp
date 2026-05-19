@@ -1,0 +1,27 @@
+<h2>Здравствуйте, {{ client_user.first_name }}!</h2>
+
+<p>Вы успешно записались в SPA-салон Lotus Bloom.</p>
+
+<p>
+  <strong>Услуга:</strong> {{ appointment.service.name }}<br>
+  <strong>Специалист:</strong> {{ appointment.employee.user }}<br>
+  <strong>Дата:</strong> {{ date_str }}<br>
+  <strong>Время:</strong> {{ time_str }} - {{ end_time_str }}
+</p>
+
+{% if account_setup_url %}
+<p>
+  Для вас создан личный кабинет клиента. Чтобы отслеживать статус записи,
+  подтверждать или отменять визит, задайте пароль по ссылке ниже:
+</p>
+
+<p>
+  <a href="{{ account_setup_url }}">Создать пароль для личного кабинета</a>
+</p>
+
+
+{% else %}
+<p>
+  Запись ожидает подтверждения. Вы можете подтвердить или отменить её в личном кабинете.
+</p>
+{% endif %}

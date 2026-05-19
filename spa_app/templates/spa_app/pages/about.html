@@ -6,7 +6,7 @@
 {% block content %}
 {% include 'spa_app/banner_slider.html' %}
 
-<section class="container py-2">
+<section class="about-page container py-4">
   <div class="content-narrow mx-auto">
     <h2 class="mb-5 title text-center">О нас</h2>
     <p class="text-justify">
@@ -14,14 +14,12 @@
       пространство, где можно замедлиться, восстановить силы и уделить внимание
       себе.
     </p>
-    <div class="row justify-content-center mb-5 mt-5">
-      <div class="col-12 col-md-8 col-lg-7 text-center">
-        <img
-          src="{% static 'spa_app/img/about_1.jpg' %}"
-          alt="about"
-          class="img-fluid about-image"
-        />
-      </div>
+    <div class="about-photo">
+      <img
+        src="{% static 'spa_app/img/about_1.jpg' %}"
+        alt="Интерьер салона"
+        class="img-fluid about-image"
+      />
     </div>
     <p class="text-justify">
       Мы уделяем особое внимание атмосфере, качеству сервиса и специалистам,
@@ -34,14 +32,12 @@
       уходу и набор услуг, который помогает расслабиться, восстановиться и
       почувствовать себя лучше.
     </p>
-    <div class="row justify-content-center mb-5 mt-5">
-      <div class="col-12 col-md-8 col-lg-7 text-center">
-        <img
-          src="{% static 'spa_app/img/about_2.jpg' %}"
-          alt="about"
-          class="img-fluid about-image"
-        />
-      </div>
+    <div class="about-photo">
+      <img
+        src="{% static 'spa_app/img/about_2.jpg' %}"
+        alt="Зона отдыха салона"
+        class="img-fluid about-image"
+      />
     </div>
     <p class="text-justify">
       Мы продолжаем развиваться и расширять сервис, сохраняя главное:
@@ -63,7 +59,7 @@
           alt="{{ specialist.user.first_name }} {{ specialist.user.last_name }}"
         />
         {% else %}
-        <img src="{% static 'spa_app/img/default.png' %}" alt="Фото отсутствует" />
+        <img src="{% static 'spa_app/img/default.png' %}" alt="Специалист" />
         {% endif %}
         <div class="specialist-name">
           {{ specialist.user.first_name }} {{ specialist.user.last_name }}
@@ -75,8 +71,8 @@
   </div>
 </section>
 
-<section class="photo-row pt-5 mb-5">
-  <div class="container-fluid px-0 mt-5">
+<section class="photo-row mb-5">
+  <div class="container-fluid px-0">
     <div class="row gx-0">
       <div class="col">
         <img

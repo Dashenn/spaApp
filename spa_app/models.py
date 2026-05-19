@@ -18,8 +18,12 @@ class AppointmentStatus(models.TextChoices):
     CREATED = "created", "Создана"
     CONFIRMED = "confirmed", "Подтверждена"
     COMPLETED = "completed", "Завершена"
+    FAILED = "failed", "Завершена неуспешно"
     CANCELLED = "cancelled", "Отменена"
-    NO_SHOW = "no_show", "Не явился"
+
+class PaymentMethod(models.TextChoices):
+    CASH = "cash", "Наличные"
+    CARD = "card", "Карта"
 
 
 class ExceptionType(models.TextChoices):
@@ -42,7 +46,7 @@ class WeekDay(models.IntegerChoices):
 
 class User(AbstractUser):
     username = models.CharField(max_length=150, unique=True)
-    email = models.EmailField(blank=True)
+    email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
     middle_name = models.CharField(max_length=150, blank=True)
@@ -55,7 +59,7 @@ class User(AbstractUser):
 
     def __str__(self):
         full_name = f"{self.last_name} {self.first_name} {self.middle_name}".strip()
-        return full_name or self.username
+        return full_name or self.phone_number
 
 
 class ClientProfile(models.Model):
@@ -245,7 +249,16 @@ class Appointment(models.Model):
     )
     comment = models.TextField(blank=True)
     is_paid = models.BooleanField(default=False)
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PaymentMethod.choices,
+        blank=True,
+    )
     paid_at = models.DateTimeField(null=True, blank=True)
+    
+
+    is_refunded = models.BooleanField(default=False)
+    refunded_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -316,7 +329,8 @@ class Review(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(5)],
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    is_published = models.BooleanField(default=True)
+    is_rejected = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]

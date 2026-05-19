@@ -1,217 +1,273 @@
 {% extends "spa_app/dashboard/layout.html" %}
+{% load static %}
 
 {% block page_title %}Аналитика{% endblock %}
 
 {% block content %}
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div>
-    <h5>
-      Сводка по финансам, записям, сотрудникам и клиентской активности за {{ month_label }}
-    </h5>
+<div class="analytics-page">
+  <div class="mb-4">
+    <h5 class="mb-1">Сводка за {{ month_label }}</h5>
+    <div class="text-muted small">Финансы, записи, способы оплаты, сотрудники и отзывы.</div>
   </div>
-</div>
 
-<div class="row g-4 mb-4">
-  <div class="col-md-4">
-    <div class="card border-0 shadow-sm h-100 dashboard-stat">
-      <div class="card-body">
-        <div class="text-muted small">Выручка за месяц</div>
-        <h3 class="mb-0">{{ paid_this_month }} ₽</h3>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-4 mb-4">
+    <div class="col">
+      <div class="card h-100 dashboard-stat">
+        <div class="card-body">
+          <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+          <div>
+            <div class="text-muted small">Выручка</div>
+            <h3 class="mb-0">{{ revenue_this_month }} ₽</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card h-100 dashboard-stat">
+        <div class="card-body">
+          <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+
+          <div>
+            <div class="text-muted small">Средний чек</div>
+            <h3 class="mb-0">{{ average_ticket|floatformat:2 }} ₽</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card h-100 dashboard-stat">
+        <div class="card-body">
+          <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+
+          <div>
+            <div class="text-muted small">Возвраты</div>
+            <h3 class="mb-0">{{ refunded_this_month }} ₽</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card h-100 dashboard-stat">
+        <div class="card-body">
+          <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+
+          <div>
+            <div class="text-muted small">Всего записей</div>
+            <h3 class="mb-0">{{ month_appointments_count }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card h-100 dashboard-stat">
+        <div class="card-body">
+          <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+
+          <div>
+            <div class="text-muted small">Завершено</div>
+            <h3 class="mb-0">{{ completed_this_month }}</h3>
+            <div class="small text-muted mt-1">{{ completion_rate }}% от всех записей</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card h-100 dashboard-stat">
+        <div class="card-body">
+          <img src="{% static 'spa_app/img/svg/decoration.svg' %}" alt="" class="dashboard-stat-icon">
+          <div>
+            <div class="text-muted small">Отменено</div>
+            <h3 class="mb-0">{{ cancelled_this_month }}</h3>
+            <div class="small text-muted mt-1">{{ cancellation_rate }}% от всех записей</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4">
-    <div class="card border-0 shadow-sm h-100 dashboard-stat">
-      <div class="card-body">
-        <div class="text-muted small">Неоплаченные суммы</div>
-        <h3 class="mb-0">{{ pending_payments_total }} ₽</h3>
+  <div class="row g-4 mb-4">
+    <div class="col-lg-8">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="mb-3">Выручка за 6 месяцев</h6>
+          <div class="analytics-chart">
+            <canvas id="revenueChart"></canvas>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="col-md-4">
-    <div class="card border-0 shadow-sm h-100 dashboard-stat">
-      <div class="card-body">
-        <div class="text-muted small">Средний чек</div>
-        <h3 class="mb-0">{{ average_ticket|floatformat:2 }} ₽</h3>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row g-4 mb-4">
-  <div class="col-md-3">
-    <div class="card border-0 shadow-sm h-100 dashboard-stat">
-      <div class="card-body">
-        <div class="text-muted small">Записей в этом месяце</div>
-        <h3 class="mb-0">{{ month_appointments_count }}</h3>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card border-0 shadow-sm h-100 dashboard-stat">
-      <div class="card-body">
-        <div class="text-muted small">Выполнено</div>
-        <h3 class="mb-0">{{ completed_this_month }}</h3>
-        <div class="small text-muted mt-1">Конверсия: {{ completion_rate }}%</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card border-0 shadow-sm h-100 dashboard-stat">
-      <div class="card-body">
-        <div class="text-muted small">Отменено</div>
-        <h3 class="mb-0">{{ cancelled_this_month }}</h3>
-        <div class="small text-muted mt-1">Доля отмен: {{ cancellation_rate }}%</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card border-0 shadow-sm h-100 dashboard-stat">
-      <div class="card-body">
-        <div class="text-muted small">Ближайшие 7 дней</div>
-        <h3 class="mb-0">{{ upcoming_week_appointments }}</h3>
-        <div class="small text-muted mt-1">Активных записей впереди</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row g-4 mb-4">
-  <div class="col-lg-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <h6 class="mb-3">Выручка за 6 месяцев</h6>
-        <canvas id="revenueChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-lg-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <h6 class="mb-3">Распределение оплат</h6>
-        <canvas id="paymentsChart"></canvas>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row g-4 mb-4">
-  <div class="col-lg-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <h6 class="mb-3">Популярные услуги</h6>
-        <canvas id="servicesChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-lg-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <h6 class="mb-3">Клиенты и репутация</h6>
-
-        <div class="row g-3">
-          <div class="col-sm-4">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Активных клиентов за месяц</div>
-              <div class="fw-semibold fs-4">{{ active_clients_this_month }}</div>
-            </div>
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="mb-3">Способы оплаты</h6>
+          <div class="analytics-chart analytics-chart-sm">
+            <canvas id="paymentsChart"></canvas>
           </div>
 
-          <div class="col-sm-4">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Повторных клиентов</div>
-              <div class="fw-semibold fs-4">{{ repeat_clients_count }}</div>
+          <div class="row g-2 mt-3">
+            <div class="col-6">
+              <div class="analytics-metric">
+                <div class="text-muted small">Наличные</div>
+                <div class="fw-semibold">{{ cash_total }} ₽</div>
+                <div class="small text-muted">{{ cash_count }} оплат</div>
+              </div>
             </div>
-          </div>
 
-          <div class="col-sm-4">
-            <div class="border rounded p-3 h-100">
-              <div class="text-muted small">Средняя оценка</div>
-              <div class="fw-semibold fs-4">
-                {% if average_rating %}
-                  {{ average_rating|floatformat:1 }}/5
-                {% else %}
-                  Нет данных
-                {% endif %}
+            <div class="col-6">
+              <div class="analytics-metric">
+                <div class="text-muted small">Карта</div>
+                <div class="fw-semibold">{{ card_total }} ₽</div>
+                <div class="small text-muted">{{ card_count }} оплат</div>
               </div>
             </div>
           </div>
         </div>
-
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row g-4 mb-4">
-  <div class="col-lg-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <h6 class="mb-3">Финансовая динамика за 6 месяцев</h6>
-
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Месяц</th>
-                <th>Оплаченных записей</th>
-                <th>Выручка</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {% for row in monthly_trend %}
-              <tr>
-                <td>{{ row.label }}</td>
-                <td>{{ row.count }}</td>
-                <td>{{ row.total }} ₽</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
       </div>
     </div>
   </div>
 
-  <div class="col-lg-6">
-    <div class="card shadow-sm h-100">
-      <div class="card-body">
-        <h6 class="mb-3">Загрузка сотрудников</h6>
-
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Сотрудник</th>
-                <th>Записей</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {% for employee in employee_stats %}
-              <tr>
-                <td>{{ employee.full_name }}</td>
-                <td>{{ employee.total_appointments }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="2" class="text-muted">Нет данных по сотрудникам</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="mb-3">Популярные услуги</h6>
+          <div class="analytics-chart analytics-chart-sm">
+            <canvas id="servicesChart"></canvas>
+          </div>
         </div>
+      </div>
+    </div>
 
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="mb-3">Клиенты и отзывы</h6>
+
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <div class="analytics-metric">
+                <div class="text-muted small">Активных клиентов</div>
+                <div class="analytics-metric-value">{{ active_clients_this_month }}</div>
+                <div class="small text-muted">За месяц</div>
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <div class="analytics-metric">
+                <div class="text-muted small">Повторных клиентов</div>
+                <div class="analytics-metric-value">{{ repeat_clients_count }}</div>
+                <div class="small text-muted">За всё время</div>
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <div class="analytics-metric">
+                <div class="text-muted small">Средняя оценка</div>
+                <div class="analytics-metric-value">
+                  {% if average_rating %}
+                    {{ average_rating|floatformat:1 }}/5
+                  {% else %}
+                    Нет данных
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="col-sm-6">
+              <div class="analytics-metric">
+                <div class="text-muted small">Отзывы на модерации</div>
+                <div class="analytics-metric-value">{{ moderation_reviews_count }}</div>
+                <a href="{% url 'dashboard_reviews' %}" class="small">Открыть отзывы</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="mb-3">Финансовая динамика</h6>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Месяц</th>
+                  <th>Оплат</th>
+                  <th>Выручка</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in monthly_trend %}
+                  <tr>
+                    <td>{{ row.label }}</td>
+                    <td>{{ row.count }}</td>
+                    <td>{{ row.total }} ₽</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="text-muted py-3">Нет данных по финансовой динамике.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-body">
+          <h6 class="mb-3">Топ сотрудников</h6>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Сотрудник</th>
+                  <th>Записей</th>
+                  <th>Успешно</th>
+                  <th>Неуспешно</th>
+                  <th>Выручка</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for employee in employee_stats %}
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">{{ employee.full_name }}</div>
+                      <div class="small text-muted">
+                        Успешность: {{ employee.load_rate }}%
+                        {% if employee.refunded_appointments %}
+                          · возвратов: {{ employee.refunded_appointments }}
+                        {% endif %}
+                      </div>
+                    </td>
+                    <td>{{ employee.total_appointments }}</td>
+                    <td>{{ employee.completed_appointments }}</td>
+                    <td>{{ employee.failed_appointments }}</td>
+                    <td>{{ employee.revenue }} ₽</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-muted py-3">Нет данных по сотрудникам.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -220,130 +276,126 @@
 {{ chart_data|json_script:"analytics-chart-data" }}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const element = document.getElementById("analytics-chart-data");
+  document.addEventListener("DOMContentLoaded", () => {
+    const dataElement = document.getElementById("analytics-chart-data");
 
-  if (!element) {
-    return;
-  }
+    if (!dataElement || typeof Chart === "undefined") {
+      return;
+    }
 
-  const data = JSON.parse(element.textContent);
+    const data = JSON.parse(dataElement.textContent);
+    const root = document.querySelector(".dashboard-body") || document.documentElement;
+    const styles = getComputedStyle(root);
+    const cssVar = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
 
-  const colors = {
-    pink: "#df68a7",
-    green: "#16a66a",
-    yellow: "#c9861f",
-    gray: "#8a96ab"
-  };
+    const colors = {
+      accent: cssVar("--dash-accent", "#df68a7"),
+      accentSoft: "rgba(223, 104, 167, 0.15)",
+      green: cssVar("--dash-green", "#16a66a"),
+      blue: "#467ca8",
+      muted: cssVar("--dash-muted", "#687489"),
+      grid: "rgba(232, 237, 245, 0.85)"
+    };
 
-  const baseOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        labels: {
-          color: "#59647a",
-          font: {
-            family: "Inter, Segoe UI, Roboto, Arial, sans-serif"
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: colors.muted,
+            font: {
+              family: "Segoe UI, Roboto, Arial, sans-serif"
+            }
           }
         }
       }
-    },
-    scales: {
+    };
+
+    const scales = {
       x: {
-        ticks: {
-          color: "#8a96ab"
-        },
-        grid: {
-          color: "rgba(232, 237, 245, 0.8)"
-        }
+        ticks: { color: colors.muted },
+        grid: { color: colors.grid }
       },
       y: {
-        ticks: {
-          color: "#8a96ab"
-        },
-        grid: {
-          color: "rgba(232, 237, 245, 0.8)"
-        }
+        beginAtZero: true,
+        ticks: { color: colors.muted },
+        grid: { color: colors.grid }
       }
-    }
-  };
+    };
 
-  new Chart(document.getElementById("revenueChart"), {
-    type: "line",
-    data: {
-      labels: data.months.labels,
-      datasets: [
-        {
+    const createChart = (id, config) => {
+      const canvas = document.getElementById(id);
+
+      if (canvas) {
+        new Chart(canvas, config);
+      }
+    };
+
+    createChart("revenueChart", {
+      type: "line",
+      data: {
+        labels: data.months.labels,
+        datasets: [{
           label: "Выручка",
           data: data.months.revenue,
-          borderColor: colors.pink,
-          backgroundColor: "rgba(223, 104, 167, 0.15)",
+          borderColor: colors.accent,
+          backgroundColor: colors.accentSoft,
           tension: 0.35,
           fill: true
-        }
-      ]
-    },
-    options: {
-      ...baseOptions,
-      plugins: {
-        legend: {
-          display: false
-        }
+        }]
+      },
+      options: {
+        ...chartOptions,
+        scales,
+        plugins: { legend: { display: false } }
       }
-    }
-  });
+    });
 
-  new Chart(document.getElementById("paymentsChart"), {
-    type: "doughnut",
-    data: {
-      labels: data.payments.labels,
-      datasets: [
-        {
+    createChart("paymentsChart", {
+      type: "doughnut",
+      data: {
+        labels: data.payments.labels,
+        datasets: [{
           data: data.payments.values,
-          backgroundColor: [
-            colors.green,
-            colors.yellow,
-            colors.gray
-          ],
+          backgroundColor: [colors.green, colors.blue],
           borderWidth: 0
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          position: "bottom"
+        }]
+      },
+      options: {
+        ...chartOptions,
+        cutout: "68%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              color: colors.muted,
+              font: { family: "Segoe UI, Roboto, Arial, sans-serif" }
+            }
+          }
         }
       }
-    }
-  });
+    });
 
-  new Chart(document.getElementById("servicesChart"), {
-    type: "bar",
-    data: {
-      labels: data.services.labels,
-      datasets: [
-        {
-          label: "Количество записей",
+    createChart("servicesChart", {
+      type: "bar",
+      data: {
+        labels: data.services.labels,
+        datasets: [{
+          label: "Завершённые записи",
           data: data.services.values,
-          backgroundColor: colors.pink,
+          backgroundColor: colors.accent,
           borderRadius: 8
-        }
-      ]
-    },
-    options: {
-      ...baseOptions,
-      plugins: {
-        legend: {
-          display: false
-        }
+        }]
+      },
+      options: {
+        ...chartOptions,
+        scales,
+        plugins: { legend: { display: false } }
       }
-    }
+    });
   });
-});
 </script>
 
 {% endblock %}

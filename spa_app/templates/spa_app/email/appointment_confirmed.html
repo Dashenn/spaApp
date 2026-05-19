@@ -1,0 +1,14 @@
+<h2>Ваша запись подтверждена</h2>
+
+<p>Здравствуйте, {{ client_user.first_name }}!</p>
+
+<p>
+  Ваша запись в Lotus Bloom подтверждена.
+</p>
+
+<p>
+  <strong>Услуга:</strong> {{ appointment.service.name }}<br>
+  <strong>Специалист:</strong> {{ appointment.employee.user }}<br>
+  <strong>Дата:</strong> {{ date_str }}<br>
+  <strong>Время:</strong> {{ time_str }} - {{ end_time_str }}
+</p>

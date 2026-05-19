@@ -1,1 +1,1 @@
-web: gunicorn spaSalon.wsgi
+web: gunicorn spaSalon:application

@@ -57,7 +57,7 @@ def send_appointment_email(
     client_user = appointment.client.user
 
     if not client_user.email:
-        return
+        raise RuntimeError("У клиента не указан email.")
 
     start_datetime = timezone.localtime(appointment.start_datetime)
     end_datetime = timezone.localtime(appointment.end_datetime)
@@ -74,10 +74,13 @@ def send_appointment_email(
         },
     )
 
-    send_mail(
+    sent_count = send_mail(
         subject,
         "",
         settings.DEFAULT_FROM_EMAIL,
         [client_user.email],
         html_message=message,
     )
+
+    if sent_count == 0:
+        raise RuntimeError("Письмо клиенту не было отправлено.")

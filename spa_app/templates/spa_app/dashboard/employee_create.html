@@ -18,7 +18,13 @@
 
         <form method="post" enctype="multipart/form-data" novalidate>
           {% csrf_token %}
-
+          <div class="row g-3">
+  <div class="col-md-4">
+    {{ form.username.label_tag }}
+    {{ form.username }}
+    <div class="text-danger small mt-1">{{ form.username.errors }}</div>
+  </div>
+</div>
           <div class="row g-3">
             <div class="col-md-4">
               {{ form.last_name.label_tag }}
@@ -137,5 +143,6 @@
       </div>
     </div>
   </div>
+</div>
 
 {% endblock %}

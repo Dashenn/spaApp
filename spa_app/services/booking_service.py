@@ -24,7 +24,11 @@ def _format_work_days(work_days):
 
 
 def _get_work_interval(employee, selected_date):
-    if not employee.work_days or not employee.work_start_time or not employee.work_end_time:
+    if (
+        not employee.work_days
+        or not employee.work_start_time
+        or not employee.work_end_time
+    ):
         return None
 
     work_days = {int(day) for day in employee.work_days}
@@ -59,7 +63,11 @@ def _subtract_intervals(free_intervals, busy_intervals):
 
 
 def _get_no_schedule_result(employee, selected_date):
-    if not employee.work_days or not employee.work_start_time or not employee.work_end_time:
+    if (
+        not employee.work_days
+        or not employee.work_start_time
+        or not employee.work_end_time
+    ):
         return AvailabilityResult(
             [],
             "У специалиста пока не настроен рабочий график.",

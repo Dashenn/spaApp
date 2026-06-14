@@ -1705,9 +1705,11 @@ def dashboard_analytics(request):
         is_refunded=False,
     )
 
-    refunded_month_appointments = month_appointments.filter(
-        is_refunded=True,
-    )
+    refunded_month_appointments = Appointment.objects.select_related("service").filter(
+    is_refunded=True,
+    refunded_at__gte=month_start,
+    refunded_at__lt=next_month_start,
+)
 
     month_appointments_count = month_appointments.count()
 
